@@ -111,7 +111,7 @@ class VantagePro2(object):
                 raise NoDeviceException()
             raise
         ack = self.link.read(len(wait_ack))
-        if wait_ack == ack:
+        if self._is_wake_ack(ack):
             LOGGER.info("Check ACK: OK (%s)" % (repr(ack)))
             return True
         #Sometimes we have a 1byte shift from Vantage Pro and that's why wake up doesn't work anymore
@@ -406,6 +406,19 @@ class VantagePro2(object):
         else:
             self.link.open()
         return True
+
+    def _is_wake_ack(self, ack):
+        '''Return True when wake ACK bytes are valid despite line-ending order.'''
+        if ack is None:
+            return False
+        if is_bytes(ack):
+            ack = ack.decode('latin1', errors='ignore')
+        # Accept expected wake responses and common bridge/proxy variants.
+        if ack in (self.WAKE_ACK, '\r\n', '\n', '\r', self.ACK):
+            return True
+        # Some links return mixed payloads where newline and ACK bytes are
+        # coalesced in one read call (e.g. "\n\x06" or "\rOK").
+        return ('\n' in ack) or ('\r' in ack)
 
     def _check_revision(self):
         '''Check firmware date and get data format revision.'''

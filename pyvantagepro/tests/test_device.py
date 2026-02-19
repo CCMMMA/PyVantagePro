@@ -260,3 +260,29 @@ def test_meta_returns_current_data_variable_names(monkeypatch):
     assert 'TempOut' in fields
     assert 'RainRate' in fields
     assert 'SunRise' in fields
+
+
+def test_wake_up_accepts_crlf_ack(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+    import pyvantagepro.utils as utils_module
+    monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.link = FakeLink('\r\n')
+    vp._link_factory = None
+    vp._timeout = 10
+
+    assert vp.wake_up() is True
+
+
+def test_wake_up_accepts_bytes_and_mixed_ack(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+    import pyvantagepro.utils as utils_module
+    monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.link = FakeLink(b'\n\x06')
+    vp._link_factory = None
+    vp._timeout = 10
+
+    assert vp.wake_up() is True
