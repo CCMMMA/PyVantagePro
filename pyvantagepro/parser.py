@@ -279,40 +279,68 @@ class ArchiveDataParserRevB(DataParser):
     )
 
     def __init__(self, data):
+        # Unpack archive bytes into named fields defined in ARCHIVE_FORMAT.
         super(ArchiveDataParserRevB, self).__init__(data, self.ARCHIVE_FORMAT)
+        # Keep a bit-level view of the raw date/time header for diagnostics.
         self['raw_datestamp'] = bytes_to_binary(self.raw_bytes[0:4])
+        # Convert Davis date/time words into a Python datetime object.
         self['Datetime'] = unpack_dmp_date_time(self['DateStamp'],
                                                 self['TimeStamp'])
+        # Remove raw timestamp words after deriving the normalized datetime.
         del self['DateStamp']
         del self['TimeStamp']
+        # Convert tenths of degrees F to degrees F.
         self['TempOut'] = self['TempOut'] / 10
+        # Convert tenths of degrees F to degrees F.
         self['TempOutHi'] = self['TempOutHi'] / 10
+        # Convert tenths of degrees F to degrees F.
         self['TempOutLow'] = self['TempOutLow'] / 10
+        # Convert hundredths of in/hr to in/hr.
         self['RainRate'] = self['RainRate'] / 100
+        # Convert hundredths of in/hr to in/hr.
         self['RainRateHi'] = self['RainRateHi'] / 100
+        # Convert thousandths of inHg to inHg.
         self['Barometer'] = self['Barometer'] / 1000
+        # Convert tenths of degrees F to degrees F.
         self['TempIn'] = self['TempIn'] / 10
+        # Convert tenths UV index to UV index.
         self['UV'] = self['UV'] / 10
+        # Convert thousandths inches to inches for hourly ET.
         self['ETHour'] = self['ETHour'] / 1000
         '''
         self['WindHiDir'] = int(self['WindHiDir'] * 22.5)
         self['WindAvgDir'] = int(self['WindAvgDir'] * 22.5)
         '''
+        # Decode 4 packed soil temperature bytes.
         SoilTempsValues = struct.unpack(b'4B', self['SoilTemps'])
+        # Convert Davis soil temp encoding (offset +90) to actual values.
         self['SoilTemps'] = tuple((t - 90) for t in SoilTempsValues)
 
+        # Decode 2 packed extra humidity channels.
         self['ExtraHum'] = struct.unpack(b'2B', self['ExtraHum'])
+        # Decode 4 packed soil moisture channels.
         self['SoilMoist'] = struct.unpack(b'4B', self['SoilMoist'])
+        # Decode 2 packed leaf temperature bytes.
         LeafTempsValues = struct.unpack(b'2B', self['LeafTemps'])
+        # Convert Davis leaf temp encoding (offset +90) to actual values.
         self['LeafTemps'] = tuple((t - 90) for t in LeafTempsValues)
+        # Decode 2 packed leaf wetness channels.
         self['LeafWetness'] = struct.unpack(b'2B', self['LeafWetness'])
+        # Decode 3 packed extra temperature bytes.
         ExtraTempsValues = struct.unpack(b'3B', self['ExtraTemps'])
+        # Convert Davis extra temp encoding (offset +90) to actual values.
         self['ExtraTemps'] = tuple((t - 90) for t in ExtraTempsValues)
+        # Expand tuple fields into numbered scalar keys (SoilTemps01, etc.).
         self.tuple_to_dict("SoilTemps")
+        # Expand tuple fields into numbered scalar keys (LeafTemps01, etc.).
         self.tuple_to_dict("LeafTemps")
+        # Expand tuple fields into numbered scalar keys (ExtraTemps01, etc.).
         self.tuple_to_dict("ExtraTemps")
+        # Expand tuple fields into numbered scalar keys (SoilMoist01, etc.).
         self.tuple_to_dict("SoilMoist")
+        # Expand tuple fields into numbered scalar keys (LeafWetness01, etc.).
         self.tuple_to_dict("LeafWetness")
+        # Expand tuple fields into numbered scalar keys (ExtraHum01, etc.).
         self.tuple_to_dict("ExtraHum")
 
 

@@ -106,15 +106,22 @@ def test_datetime_parser():
 
 
 def test_dump_date_time():
+    # Build a deterministic datetime for round-trip verification.
     d = datetime(2012, 10, 26, 10, 10)
+    # Encode datetime into Davis DateStamp/TimeStamp plus CRC.
     packed = pack_dmp_date_time(d)
+    # Unpack encoded payload into date, time, and CRC words.
     date, time, _ = struct.unpack(b"HHH", packed)
+    # Ensure decoded date/time exactly matches the original.
     assert d == unpack_dmp_date_time(date, time)
 
 
 def test_archive_rain_rate_scaling():
+    # Encode 2024-03-02 using Davis packed archive date format.
     date = 2 + 3 * 32 + (2024 - 2000) * 512
+    # Use 12:34 packed as HHMM.
     time = 1234
+    # Build one full binary archive record with known rain-rate values.
     raw = struct.pack(
         b'=HHHHHHHHHHHBBBBBBBBHBB2s2s4sB2s3s4s',
         date, time,         # DateStamp, TimeStamp
@@ -128,6 +135,9 @@ def test_archive_rain_rate_scaling():
         0,                  # RecType
         b'\x32\x33', b'\x60\x61\x62', b'\x10\x11\x12\x13',  # Extra*
     )
+    # Parse binary payload using archive parser under test.
     item = ArchiveDataParserRevB(raw)
+    # Verify rain rate converts from hundredths to engineering units.
     assert item['RainRate'] == 1.23
+    # Verify rain-rate high-watermark uses identical scaling.
     assert item['RainRateHi'] == 4.56
