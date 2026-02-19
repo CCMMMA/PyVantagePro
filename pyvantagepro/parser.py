@@ -288,6 +288,8 @@ class ArchiveDataParserRevB(DataParser):
         self['TempOut'] = self['TempOut'] / 10
         self['TempOutHi'] = self['TempOutHi'] / 10
         self['TempOutLow'] = self['TempOutLow'] / 10
+        self['RainRate'] = self['RainRate'] / 100
+        self['RainRateHi'] = self['RainRateHi'] / 100
         self['Barometer'] = self['Barometer'] / 1000
         self['TempIn'] = self['TempIn'] / 10
         self['UV'] = self['UV'] / 10

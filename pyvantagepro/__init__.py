@@ -11,7 +11,12 @@
 '''
 # Make sure the logger is configured early:
 from .logger import LOGGER, active_logger
-from .device import VantagePro2
+try:
+    from .device import VantagePro2
+except ImportError:
+    # Keep top-level imports usable when optional runtime deps (pylink)
+    # are not installed, e.g. parser/utils-only environments.
+    VantagePro2 = None
 
 VERSION = '0.4.0dev'
 __version__ = VERSION

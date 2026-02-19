@@ -15,8 +15,9 @@ import struct
 
 
 from ..logger import active_logger
-from ..parser import (LoopDataParserRevB, VantageProCRC, pack_datetime,
-                      unpack_datetime, pack_dmp_date_time,
+from ..parser import (LoopDataParserRevB, ArchiveDataParserRevB,
+                      VantageProCRC, pack_datetime, unpack_datetime,
+                      pack_dmp_date_time,
                       unpack_dmp_date_time)
 from ..utils import hex_to_bytes
 
@@ -109,3 +110,24 @@ def test_dump_date_time():
     packed = pack_dmp_date_time(d)
     date, time, _ = struct.unpack(b"HHH", packed)
     assert d == unpack_dmp_date_time(date, time)
+
+
+def test_archive_rain_rate_scaling():
+    date = 2 + 3 * 32 + (2024 - 2000) * 512
+    time = 1234
+    raw = struct.pack(
+        b'=HHHHHHHHHHHBBBBBBBBHBB2s2s4sB2s3s4s',
+        date, time,         # DateStamp, TimeStamp
+        700, 710, 690,      # TempOut, TempOutHi, TempOutLow
+        123, 456,           # RainRate, RainRateHi
+        30000, 500, 6,      # Barometer, SolarRad, WindSamps
+        680,                # TempIn
+        50, 51, 3, 8, 4, 5, 9, 20,  # HumIn..ETHour
+        700, 25, 1,         # SolarRadHi, UVHi, ForecastRuleNo
+        b'\x64\x65', b'\x01\x02', b'\x5A\x5B\x5C\x5D',  # Leaf/Soil temps
+        0,                  # RecType
+        b'\x32\x33', b'\x60\x61\x62', b'\x10\x11\x12\x13',  # Extra*
+    )
+    item = ArchiveDataParserRevB(raw)
+    assert item['RainRate'] == 1.23
+    assert item['RainRateHi'] == 4.56
