@@ -11,6 +11,7 @@
 '''
 from __future__ import division, unicode_literals
 import struct
+import errno
 from datetime import datetime, timedelta
 from pylink import link_from_url, SerialLink
 
@@ -95,7 +96,12 @@ class VantagePro2(object):
         '''Wakeup the station console.'''
         wait_ack = self.WAKE_ACK
         LOGGER.info("try wake up console")
-        self.link.write(self.WAKE_STR)
+        try:
+            self.link.write(self.WAKE_STR)
+        except OSError as e:
+            if self._recover_broken_pipe(e):
+                raise NoDeviceException()
+            raise
         ack = self.link.read(len(wait_ack))
         if wait_ack == ack:
             LOGGER.info("Check ACK: OK (%s)" % (repr(ack)))
@@ -120,13 +126,20 @@ class VantagePro2(object):
          '''
         if is_bytes(data):
             LOGGER.info("try send : %s" % bytes_to_hex(data))
-            self.link.write(data)
-        else:
             try:
-                LOGGER.info("try send : %s" % data)
+                self.link.write(data)
+            except OSError as e:
+                if self._recover_broken_pipe(e):
+                    raise BadAckException()
+                raise
+        else:
+            LOGGER.info("try send : %s" % data)
+            try:
                 self.link.write("%s\n" % data)
-            except:
-                print("not sent")
+            except OSError as e:
+                if self._recover_broken_pipe(e):
+                    raise BadAckException()
+                raise
         if wait_ack is None:
             return True
         ack = self.link.read(len(wait_ack), timeout=timeout)
@@ -362,6 +375,18 @@ class VantagePro2(object):
             
     def close(self):
         self.link.close()
+        return True
+
+    def _recover_broken_pipe(self, error):
+        '''Re-open the link when socket write fails with EPIPE.'''
+        if getattr(error, 'errno', None) != errno.EPIPE:
+            return False
+        LOGGER.error("Broken pipe detected, reconnecting link")
+        try:
+            self.link.close()
+        except Exception:
+            pass
+        self.link.open()
         return True
 
     def _check_revision(self):
