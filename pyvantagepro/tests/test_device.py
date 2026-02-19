@@ -223,3 +223,40 @@ def test_wake_up_recreates_link_when_open_cannot_recover(monkeypatch):
     assert vp.wake_up() is True
     assert created['count'] == 1
     assert isinstance(vp.link, HealthyLink)
+
+
+def test_meta_returns_current_data_variable_names(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+    import pyvantagepro.utils as utils_module
+    monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
+
+    loop_payload = hex_to_bytes(
+        "4C4F4FC4006802547B52031EFF7FFFFFFF7FFFFFFFFFFFFF"
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F0000"
+        "FFFF000000003C03000000000000FFFFFFFFFFFFFF000000"
+        "0000000000000000000000000000008C00060C610183070A"
+        "0D2A3C"
+    )
+
+    link = ScriptedLink(
+        read_values=[
+            '\n\r',
+            '\x06',
+            loop_payload,
+        ]
+    )
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.link = link
+    vp._link_factory = None
+    vp._timeout = 10
+    vp.RevA = False
+    vp.RevB = True
+
+    fields = vp.meta()
+    assert isinstance(fields, list)
+    assert 'Datetime' in fields
+    assert 'TempIn' in fields
+    assert 'TempOut' in fields
+    assert 'RainRate' in fields
+    assert 'SunRise' in fields

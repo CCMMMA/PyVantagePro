@@ -224,6 +224,10 @@ class VantagePro2(object):
         else:
             raise NotImplementedError('Do not support RevB data format')
 
+    def meta(self):
+        '''Return the names of variables available from get_current_data().'''
+        return list(self.get_current_data().keys())
+
     def get_archives(self, start_date=None, stop_date=None):
         '''Get archive records until `start_date` and `stop_date` as
         ListDict.
