@@ -64,6 +64,124 @@ print(len(archives))
 device.close()
 ```
 
+## More API Examples
+
+### 1. List available live-data variables
+
+```python
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+fields = device.meta()  # names returned by get_current_data()
+print(fields)
+device.close()
+```
+
+### 2. Read only selected live fields
+
+```python
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+data = device.get_current_data()
+
+subset = data.filter(('Datetime', 'TempIn', 'TempOut', 'HumOut', 'RainRate', 'WindSpeed'))
+print(subset)
+print(subset.to_csv())
+device.close()
+```
+
+### 3. Download archives for a specific time window
+
+```python
+from datetime import datetime
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+
+start = datetime(2026, 2, 19, 0, 0)
+stop = datetime(2026, 2, 19, 23, 59)
+archives = device.get_archives(start_date=start, stop_date=stop)
+
+print(f"records: {len(archives)}")
+print(archives[0])
+print(archives[-1])
+device.close()
+```
+
+### 4. Keep a local CSV archive up to date
+
+```python
+from pathlib import Path
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+db_path = Path("weather_archive.csv")
+
+new_rows = device.get_archives()
+if new_rows:
+    csv_text = new_rows.to_csv(header=not db_path.exists())
+    mode = "a" if db_path.exists() else "w"
+    with db_path.open(mode) as f:
+        f.write(csv_text if mode == "w" else csv_text.split("\n", 1)[1])
+
+device.close()
+```
+
+### 5. Read station metadata and diagnostics
+
+```python
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+
+print("Firmware date:", device.firmware_date)
+print("Firmware version:", device.firmware_version)
+print("Archive period (min):", device.getperiod())
+print("Timezone:", device.timezone)
+print("Diagnostics:", device.getdiagnostics())
+print("Barometer calibration:", device.getbar())
+
+device.close()
+```
+
+### 6. Set station time and archive period
+
+```python
+from datetime import datetime
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+
+before = device.gettime()
+device.settime(datetime.now())
+after = device.gettime()
+print("time:", before, "->", after)
+
+old_period = device.getperiod()
+device.setperiod(10)  # allowed values: 1, 5, 10, 15, 30, 60, 120
+print("archive period:", old_period, "->", device.getperiod())
+
+device.close()
+```
+
+### 7. Handle recoverable link errors
+
+```python
+from pyvantagepro import VantagePro2
+from pyvantagepro.device import NoDeviceException, BadAckException
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222', timeout=10)
+
+try:
+    data = device.get_current_data()
+except (NoDeviceException, BadAckException) as exc:
+    # The library retries internally; this handles final failure.
+    print("station read failed:", exc)
+finally:
+    device.close()
+```
+
 ## Connection URLs
 
 `PyVantagePro` uses `pylink` URLs, for example:
