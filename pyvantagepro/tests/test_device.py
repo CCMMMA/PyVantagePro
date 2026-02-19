@@ -11,6 +11,9 @@ import errno
 import importlib
 import sys
 import types
+from datetime import datetime
+
+from ..utils import hex_to_bytes
 
 
 class DummySerialLink(object):
@@ -37,6 +40,33 @@ class FakeLink(object):
 
     def read(self, size, timeout=None):
         return self.ack
+
+    def open(self):
+        self.open_calls += 1
+
+    def close(self):
+        self.close_calls += 1
+
+
+class ScriptedLink(object):
+    def __init__(self, read_values, fail_on_writes=None):
+        self.read_values = list(read_values)
+        self.fail_on_writes = set(fail_on_writes or [])
+        self.write_calls = 0
+        self.open_calls = 0
+        self.close_calls = 0
+
+    def write(self, data):
+        self.write_calls += 1
+        if self.write_calls in self.fail_on_writes:
+            raise OSError(errno.EPIPE, "Broken pipe")
+        return data
+
+    def read(self, size, timeout=None):
+        return self.read_values.pop(0)
+
+    def empty_socket(self):
+        return None
 
     def open(self):
         self.open_calls += 1
@@ -84,3 +114,48 @@ def test_send_reconnects_after_broken_pipe(monkeypatch):
     assert vp.send("GETTIME", vp.ACK) is True
     assert vp.link.close_calls == 1
     assert vp.link.open_calls == 1
+
+
+def test_get_current_data_after_gettime_recovers_broken_pipe(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+    import pyvantagepro.utils as utils_module
+    monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
+
+    # Valid GETTIME payload (includes CRC).
+    gettime_payload = hex_to_bytes("25 35 0A 07 06 70 60 BA")
+    # Valid LOOP payload used in parser tests.
+    loop_payload = hex_to_bytes(
+        "4C4F4FC4006802547B52031EFF7FFFFFFF7FFFFFFFFFFFFF"
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F0000"
+        "FFFF000000003C03000000000000FFFFFFFFFFFFFF000000"
+        "0000000000000000000000000000008C00060C610183070A"
+        "0D2A3C"
+    )
+
+    # Sequence:
+    # - gettime wake ACK, gettime send ACK, gettime data
+    # - get_current_data wake ACK (after one reconnect), LOOP ACK, LOOP data
+    link = ScriptedLink(
+        read_values=[
+            '\n\r',
+            '\x06',
+            gettime_payload,
+            '\n\r',
+            '\x06',
+            loop_payload,
+        ],
+        fail_on_writes={3},  # fail first wake_up write in get_current_data()
+    )
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.link = link
+    vp.RevA = False
+    vp.RevB = True
+
+    got_time = vp.gettime()
+    current_data = vp.get_current_data()
+
+    assert got_time == datetime(2012, 6, 7, 10, 53, 37)
+    assert current_data['RainRate'] == 655.35
+    assert link.close_calls == 1
+    assert link.open_calls == 1
