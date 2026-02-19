@@ -75,6 +75,43 @@ class ScriptedLink(object):
         self.close_calls += 1
 
 
+class DeadLink(object):
+    def __init__(self):
+        self.open_calls = 0
+        self.close_calls = 0
+
+    def write(self, data):
+        raise OSError(errno.EPIPE, "Broken pipe")
+
+    def read(self, size, timeout=None):
+        return '\n\r'
+
+    def open(self):
+        self.open_calls += 1
+
+    def close(self):
+        self.close_calls += 1
+
+
+class HealthyLink(object):
+    def __init__(self, wake_ack):
+        self.wake_ack = wake_ack
+        self.open_calls = 0
+        self.close_calls = 0
+
+    def write(self, data):
+        return data
+
+    def read(self, size, timeout=None):
+        return self.wake_ack
+
+    def open(self):
+        self.open_calls += 1
+
+    def close(self):
+        self.close_calls += 1
+
+
 def load_device_module(monkeypatch):
     fake_pylink = types.ModuleType(str('pylink'))
     fake_pylink.link_from_url = lambda url: None
@@ -96,6 +133,8 @@ def test_wake_up_reconnects_after_broken_pipe(monkeypatch):
 
     vp = object.__new__(device_module.VantagePro2)
     vp.link = FakeLink(vp.WAKE_ACK, fail_first_write=True)
+    vp._link_factory = None
+    vp._timeout = 10
 
     assert vp.wake_up() is True
     assert vp.link.close_calls == 1
@@ -110,6 +149,8 @@ def test_send_reconnects_after_broken_pipe(monkeypatch):
 
     vp = object.__new__(device_module.VantagePro2)
     vp.link = FakeLink(vp.ACK, fail_first_write=True)
+    vp._link_factory = None
+    vp._timeout = 10
 
     assert vp.send("GETTIME", vp.ACK) is True
     assert vp.link.close_calls == 1
@@ -149,6 +190,8 @@ def test_get_current_data_after_gettime_recovers_broken_pipe(monkeypatch):
 
     vp = object.__new__(device_module.VantagePro2)
     vp.link = link
+    vp._link_factory = None
+    vp._timeout = 10
     vp.RevA = False
     vp.RevB = True
 
@@ -159,3 +202,24 @@ def test_get_current_data_after_gettime_recovers_broken_pipe(monkeypatch):
     assert current_data['RainRate'] == 655.35
     assert link.close_calls == 1
     assert link.open_calls == 1
+
+
+def test_wake_up_recreates_link_when_open_cannot_recover(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+    import pyvantagepro.utils as utils_module
+    monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
+
+    created = {'count': 0}
+
+    def factory():
+        created['count'] += 1
+        return HealthyLink(device_module.VantagePro2.WAKE_ACK)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.link = DeadLink()
+    vp._link_factory = factory
+    vp._timeout = 10
+
+    assert vp.wake_up() is True
+    assert created['count'] == 1
+    assert isinstance(vp.link, HealthyLink)

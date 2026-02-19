@@ -64,8 +64,10 @@ class VantagePro2(object):
     ESC = '\x1b'
     OK = '\n\rOK\n\r'
 
-    def __init__(self, link):
+    def __init__(self, link, link_factory=None, timeout=None):
         self.link = link
+        self._link_factory = link_factory
+        self._timeout = timeout
         self.link.open()
         self._check_revision()
 
@@ -76,9 +78,12 @@ class VantagePro2(object):
         :param url: A `PyLink` connection URL.
         :param timeout: Set a read timeout value.
         '''
-        link = link_from_url(url)
-        link.settimeout(timeout)
-        return cls(link)
+        def link_factory():
+            link = link_from_url(url)
+            link.settimeout(timeout)
+            return link
+
+        return cls(link_factory(), link_factory=link_factory, timeout=timeout)
 
     @classmethod
     def from_serial(cls, tty, baud, timeout=10):
@@ -87,9 +92,12 @@ class VantagePro2(object):
         :param url: A `PyLink` connection URL.
         :param timeout: Set a read timeout value.
         '''
-        link = SerialLink(tty, baud)
-        link.settimeout(timeout)
-        return cls(link)
+        def link_factory():
+            link = SerialLink(tty, baud)
+            link.settimeout(timeout)
+            return link
+
+        return cls(link_factory(), link_factory=link_factory, timeout=timeout)
 
     @retry(tries=3, delay=1)
     def wake_up(self):
@@ -386,7 +394,13 @@ class VantagePro2(object):
             self.link.close()
         except Exception:
             pass
-        self.link.open()
+        if self._link_factory is not None:
+            # Some pylink transports cannot be reliably reused after EPIPE,
+            # so rebuild the link object from original connection parameters.
+            self.link = self._link_factory()
+            self.link.open()
+        else:
+            self.link.open()
         return True
 
     def _check_revision(self):
