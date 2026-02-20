@@ -539,6 +539,10 @@ class VantagePro2(object):
         '''Return current data as a list ordered like meta().'''
         return self._mapping_to_list_payload(self.get_current_data())
 
+    def get_current_data_as_csv(self):
+        '''Backward-compatible alias for get_current_data_as_list().'''
+        return self.get_current_data_as_list()
+
     def get_archives_as_json(self, start_date=None, stop_date=None):
         '''Return archive rows as normalized JSON dictionaries.'''
         rows = self.get_archives(start_date=start_date, stop_date=stop_date)
