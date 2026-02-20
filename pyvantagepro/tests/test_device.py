@@ -427,6 +427,25 @@ def test_get_current_data_as_json_drops_future_storm_start_date(monkeypatch):
     json.dumps(payload)
 
 
+def test_get_current_data_as_json_drops_uv_and_solar_sentinels(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'Datetime': datetime(2026, 1, 2, 3, 4, 5),
+        'UV': 255,
+        'SolarRad': 32767,
+        'TempIn': 68.0,
+    }
+
+    payload = vp.get_current_data_as_json()
+    assert payload['TempIn'] == 20.0
+    assert 'UV' not in payload
+    assert 'SolarRad' not in payload
+    assert payload['failed'] == ['UV', 'SolarRad']
+    json.dumps(payload)
+
+
 def test_get_current_data_as_list_returns_meta_order(monkeypatch):
     device_module = load_device_module(monkeypatch)
 

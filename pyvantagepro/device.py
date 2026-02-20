@@ -264,6 +264,10 @@ class VantagePro2(object):
         "WindSpeed10Min": (0.0, 100.0),
         "BatteryVolts": (0.0, 5.0),
     }
+    JSON_SANITY_SENTINELS = {
+        "UV": {255},
+        "SolarRad": {32767},
+    }
     META_INTERNAL_UNITS = {
         "Datetime": "console datetime",
         "BarTrend": "trend code",
@@ -619,6 +623,8 @@ class VantagePro2(object):
                 return False
         if isinstance(value, (int, float)):
             if not math.isfinite(value):
+                return False
+            if key in self.JSON_SANITY_SENTINELS and value in self.JSON_SANITY_SENTINELS[key]:
                 return False
             if key in self.JSON_SANITY_RANGES:
                 lower, upper = self.JSON_SANITY_RANGES[key]

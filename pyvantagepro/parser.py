@@ -249,11 +249,15 @@ class LoopDataParserRevB(DataParser):
 
     def unpack_storm_date(self):
         '''Given a packed storm date field, unpack and return date.'''
-        date = bytes_to_binary(self.raw_bytes[48:50])
-        year = binary_to_int(date, 0, 7) + 2000
-        day = binary_to_int(date, 7, 12)
-        month = binary_to_int(date, 12, 16)
-        return "%s-%s-%s" % (year, month, day)
+        date = struct.unpack(b'<H', self.raw_bytes[48:50])[0]
+        if date in (0x0000, 0xFFFF):
+            return None
+        day = date & 0x1f
+        month = (date >> 5) & 0x0f
+        year = ((date >> 9) & 0x7f) + 2000
+        if not (1 <= month <= 12 and 1 <= day <= 31):
+            return None
+        return "%04d-%02d-%02d" % (year, month, day)
 
     def unpack_time(self, time):
         '''Given a packed time field, unpack and return "HH:MM" string.'''

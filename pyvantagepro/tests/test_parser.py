@@ -85,7 +85,7 @@ class TestLoopDataParser:
         assert item['RainYear'] == 8.28
         assert item['SoilMoist01'] == 255
         assert item['SolarRad'] == 32767
-        assert item['StormStartDate'] == '2127-15-31'
+        assert item['StormStartDate'] is None
         assert item['SunRise'] == '03:53'
         assert item['SunSet'] == '19:23'
         assert item['TempIn'] == 85.0
@@ -94,6 +94,13 @@ class TestLoopDataParser:
         assert item['WindDir'] == 32767
         assert item['WindSpeed'] == 255
         assert item['WindSpeed10Min'] == 255
+
+    def test_unpack_storm_date_valid_datestamp(self):
+        raw = bytearray(self.bytes)
+        packed = 2 + 3 * 32 + (2024 - 2000) * 512  # 2024-03-02
+        raw[48:50] = struct.pack(b'<H', packed)
+        item = LoopDataParserRevB(bytes(raw), datetime.now())
+        assert item['StormStartDate'] == '2024-03-02'
 
 
 def test_datetime_parser():
