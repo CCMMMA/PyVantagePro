@@ -65,14 +65,20 @@ device.close()
 
 ## More API Examples
 
-### 1. List available live-data variables
+### 1. List available live-data variables and units
 
 ```python
 from pyvantagepro import VantagePro2
 
 device = VantagePro2.from_url('tcp:127.0.0.1:22222')
-fields = device.meta()  # names returned by get_current_data()
-print(fields)
+meta = device.meta()  # ordered list of {"param", "units", "si"}
+print(meta[0])
+# Example:
+# {
+#   "param": "TempIn",
+#   "units": "degF",
+#   "si": "degC"
+# }
 device.close()
 ```
 
@@ -90,7 +96,7 @@ print(subset.to_csv())
 device.close()
 ```
 
-### 3. Get live data as a JSON object
+### 3. Get live data as a normalized JSON object
 
 ```python
 import json
@@ -100,13 +106,57 @@ device = VantagePro2.from_url('tcp:127.0.0.1:22222')
 payload = device.get_current_data_as_json()
 
 print(type(payload))          # dict
-print(payload['TempIn'])      # float
-print(payload['Datetime'])    # JSON-ready datetime string
+print(payload['TempIn'])      # degC
+print(payload['HumOut'])      # 0..1 (fraction)
+print(payload['Datetime'])    # ISO8601 datetime string
 
 # Optional: serialize to JSON string
 print(json.dumps(payload))
 device.close()
 ```
+
+### 3b. Get live data as an ordered list
+
+`get_current_data_as_list()` returns values in the same order as `meta()`.
+If a value fails sanity checks (or matches known sentinel values), the element is `None`.
+
+```python
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+
+meta = device.meta()
+values = device.get_current_data_as_list()
+
+for info, value in zip(meta, values):
+    print(info["param"], value, info["si"])
+
+device.close()
+```
+
+### 3c. `get_current_data_as_csv()` compatibility
+
+New code should use `get_current_data_as_list()`.
+If you need compatibility with older snippets that call `get_current_data_as_csv()`, use:
+
+```python
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+get_values = getattr(device, "get_current_data_as_csv", device.get_current_data_as_list)
+values = get_values()
+print(values)
+device.close()
+```
+
+### 3d. Normalization rules used by JSON/list payloads
+
+- Date/time fields are exported as ISO8601 strings.
+- Values are converted to SI where applicable (for example: `degF -> degC`, `in -> mm`, `mph -> m/s`, `inHg -> Pa`).
+- `HumIn` and `HumOut` are normalized to fractions in the `0..1` range.
+- Selected fields are rounded to fixed precision for stable downstream processing.
+- Alarm/sentinel fields are filtered in JSON output and set to `None` in list output.
+- Sanity checks are applied; JSON drops invalid values and records their names in `failed`, while list output keeps position and sets invalid entries to `None`.
 
 ### 4. Download archives for a specific time window
 
