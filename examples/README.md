@@ -152,6 +152,11 @@ python3 examples/12_mqtt.py \
     - messages are removed from spool only after successful publish.
 - If MQTT is unavailable, data collection and CSV writing continue and queued packets are sent when connectivity returns.
 - Uses logging output instead of `print`.
+- Handles `SIGINT`/`SIGTERM` for graceful shutdown:
+  - stops acquisition loop,
+  - closes MQTT worker cleanly,
+  - flushes/finishes file writes,
+  - closes VantagePro2 connection.
 
 CLI options:
 

@@ -3,6 +3,7 @@ import argparse
 import csv
 import json
 import logging
+import signal
 import threading
 import time
 from collections import deque
@@ -291,6 +292,24 @@ def build_arg_parser():
     return parser
 
 
+def install_signal_handlers(stop_event):
+    previous = {}
+
+    def _handle_signal(signum, frame):
+        LOGGER.info("Received signal %s, shutting down...", signum)
+        stop_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        previous[sig] = signal.getsignal(sig)
+        signal.signal(sig, _handle_signal)
+    return previous
+
+
+def restore_signal_handlers(previous):
+    for sig, handler in previous.items():
+        signal.signal(sig, handler)
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -318,6 +337,7 @@ def main():
         LOGGER.info("Dry mode enabled: CSV and MQTT disabled")
 
     stop_event = threading.Event()
+    previous_handlers = install_signal_handlers(stop_event)
     forwarder = None
     spool = None
 
@@ -335,7 +355,7 @@ def main():
         headers = [item["param"] for item in device.meta()]
         current_csv = None
 
-        while True:
+        while not stop_event.is_set():
             now_utc = datetime.utcnow()
             payload = device.get_current_data_as_json()
             row = csv_row_values(headers, payload)
@@ -363,12 +383,14 @@ def main():
             elif not no_mqtt:
                 spool.put(packet)
 
-            time.sleep(cfg["interval"])
+            if stop_event.wait(cfg["interval"]):
+                break
     finally:
         stop_event.set()
         if forwarder is not None:
             forwarder.join(timeout=3.0)
         device.close()
+        restore_signal_handlers(previous_handlers)
 
 
 if __name__ == "__main__":
