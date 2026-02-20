@@ -165,7 +165,7 @@ Automatic behaviors:
 - If `pathStorage` is missing, CSV is disabled (equivalent to `--no-csv`).
 - If MQTT config is missing or incomplete, dry mode is forced.
 
-Supported config schema (`examples/config.json`):
+Supported config schema (`examples/config.json.sample`):
 
 ```json
 {
@@ -192,6 +192,7 @@ Supported config schema (`examples/config.json`):
 Run:
 
 ```bash
+cp examples/config.json.sample examples/config.json
 python3 examples/14_stream.py --config examples/config.json
 ```
 
