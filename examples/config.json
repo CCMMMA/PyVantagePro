@@ -1,5 +1,5 @@
 {
-  "uuid": "it.uniparthenope.meteo.ws2",
+  "uuid": "ws2",
   "name": "Gaiola",
   "lat": 40.7923,
   "lon": 14.1875,
@@ -12,10 +12,10 @@
 
   "pathStorage": "/storage/vantage-pro/",
 
-  "mqttBroker": "193.205.230.7",
+  "mqttBroker": "",
   "mqttPort": 1883,
-  "mqttUser": "admin",
-  "mqttPass": "password",
+  "mqttUser": "",
+  "mqttPass": "",
   "mqttQos": 1,
 
   "offlineMaxMessages": 200000,
