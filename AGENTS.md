@@ -15,11 +15,12 @@ Keep changes small, testable, and compatible with legacy behavior unless a bug f
 2. Add or update tests for the exact behavior being changed.
 3. Implement the minimal code change that makes the test pass.
 4. Run the full test suite before committing.
+5. Update the README.md file if needed.
 
 ## Code Style
 - Preserve the existing coding style in each file.
 - Prefer small, explicit transformations over broad refactors.
-- Add pedagogical line-by-line comments to any source code.
+- Add comments only where logic or data encoding is non-obvious.
 - Keep comments factual and close to the code they describe.
 
 ## Parsing/Units Rules
