@@ -226,7 +226,7 @@ def test_wake_up_recreates_link_when_open_cannot_recover(monkeypatch):
     assert isinstance(vp.link, HealthyLink)
 
 
-def test_meta_returns_current_data_variable_names(monkeypatch):
+def test_meta_returns_current_data_metadata(monkeypatch):
     device_module = load_device_module(monkeypatch)
     import pyvantagepro.utils as utils_module
     monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
@@ -256,11 +256,14 @@ def test_meta_returns_current_data_variable_names(monkeypatch):
 
     fields = vp.meta()
     assert isinstance(fields, list)
-    assert 'Datetime' in fields
-    assert 'TempIn' in fields
-    assert 'TempOut' in fields
-    assert 'RainRate' in fields
-    assert 'SunRise' in fields
+    assert isinstance(fields[0], dict)
+    assert set(fields[0].keys()) == set(['param', 'units', 'si'])
+    params = [entry['param'] for entry in fields]
+    assert 'Datetime' in params
+    assert 'TempIn' in params
+    assert 'TempOut' in params
+    assert 'RainRate' in params
+    assert 'SunRise' in params
 
 
 def test_get_current_data_as_json(monkeypatch):
@@ -435,7 +438,7 @@ def test_get_current_data_as_list_returns_meta_order(monkeypatch):
         'WindSpeed': 10,
     }
 
-    fields = vp.meta()
+    fields = [entry['param'] for entry in vp.meta()]
     payload = vp.get_current_data_as_list()
     assert isinstance(payload, list)
     assert len(payload) == len(fields)
@@ -458,7 +461,7 @@ def test_get_current_data_as_list_sets_none_for_invalid_values(monkeypatch):
         'TempIn': 68.0,
     }
 
-    fields = vp.meta()
+    fields = [entry['param'] for entry in vp.meta()]
     payload = vp.get_current_data_as_list()
     assert payload[fields.index('StormStartDate')] is None
     assert payload[fields.index('HumIn')] is None

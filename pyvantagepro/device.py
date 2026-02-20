@@ -264,6 +264,64 @@ class VantagePro2(object):
         "WindSpeed10Min": (0.0, 100.0),
         "BatteryVolts": (0.0, 5.0),
     }
+    META_INTERNAL_UNITS = {
+        "Datetime": "console datetime",
+        "BarTrend": "trend code",
+        "Barometer": "inHg",
+        "TempIn": "degF",
+        "TempOut": "degF",
+        "HumIn": "%",
+        "HumOut": "%",
+        "WindSpeed": "mph",
+        "WindSpeed10Min": "mph",
+        "WindDir": "deg",
+        "RainRate": "in/h",
+        "RainStorm": "in",
+        "RainDay": "in",
+        "RainMonth": "in",
+        "RainYear": "in",
+        "ETDay": "in",
+        "ETMonth": "in",
+        "ETYear": "in",
+        "UV": "index",
+        "SolarRad": "W/m2",
+        "BatteryStatus": "status code",
+        "BatteryVolts": "V",
+        "ForecastIcon": "icon code",
+        "ForecastRuleNo": "rule code",
+        "SunRise": "HH:MM",
+        "SunSet": "HH:MM",
+        "StormStartDate": "YYYY-M-D",
+    }
+    META_SI_UNITS = {
+        "Datetime": "ISO 8601 datetime",
+        "BarTrend": "trend code",
+        "Barometer": "Pa",
+        "TempIn": "degC",
+        "TempOut": "degC",
+        "HumIn": "1",
+        "HumOut": "1",
+        "WindSpeed": "m/s",
+        "WindSpeed10Min": "m/s",
+        "WindDir": "deg",
+        "RainRate": "mm/h",
+        "RainStorm": "mm",
+        "RainDay": "mm",
+        "RainMonth": "mm",
+        "RainYear": "mm",
+        "ETDay": "mm",
+        "ETMonth": "mm",
+        "ETYear": "mm",
+        "UV": "index",
+        "SolarRad": "W/m2",
+        "BatteryStatus": "status code",
+        "BatteryVolts": "V",
+        "ForecastIcon": "icon code",
+        "ForecastRuleNo": "rule code",
+        "SunRise": "ISO 8601 time",
+        "SunSet": "ISO 8601 time",
+        "StormStartDate": "ISO 8601 date",
+    }
 
     def __init__(self, link, link_factory=None, timeout=None):
         self.link = link
@@ -427,7 +485,44 @@ class VantagePro2(object):
 
     def meta(self):
         '''Return the names of variables available from get_current_data().'''
-        return list(self.get_current_data().keys())
+        return [
+            {
+                "param": key,
+                "units": self._meta_internal_units(key),
+                "si": self._meta_si_units(key),
+            }
+            for key in self.get_current_data().keys()
+        ]
+
+    def _meta_internal_units(self, key):
+        if key in self.META_INTERNAL_UNITS:
+            return self.META_INTERNAL_UNITS[key]
+        if key.startswith("Alarm"):
+            return "flag (0/1)"
+        if key.startswith("HumExtra"):
+            return "%"
+        if key.startswith("ExtraTemps") or key.startswith("LeafTemps") or key.startswith("SoilTemps"):
+            return "sensor code"
+        if key.startswith("LeafWetness"):
+            return "leaf wetness index"
+        if key.startswith("SoilMoist"):
+            return "soil moisture index"
+        return "raw"
+
+    def _meta_si_units(self, key):
+        if key in self.META_SI_UNITS:
+            return self.META_SI_UNITS[key]
+        if key.startswith("Alarm"):
+            return "flag (0/1)"
+        if key.startswith("HumExtra"):
+            return "%"
+        if key.startswith("ExtraTemps") or key.startswith("LeafTemps") or key.startswith("SoilTemps"):
+            return "degC"
+        if key.startswith("LeafWetness"):
+            return "leaf wetness index"
+        if key.startswith("SoilMoist"):
+            return "soil moisture index"
+        return "raw"
 
     def get_current_data_as_json(self):
         '''Return get_current_data() as a JSON-serializable dict.'''
