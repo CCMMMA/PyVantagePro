@@ -35,9 +35,8 @@ python3 -m pip install -U -e .
 ### Upgrade an existing environment
 
 ```bash
-python3 -m pip install -U .
-# or
-python3 -m pip install -U git+https://github.com/CCMMMA/PyVantagePro.git
+python -m pip uninstall -y pyvantagepro PyVantagePro
+python -m pip install --no-cache-dir -U git+https://github.com/CCMMMA/PyVantagePro.git@master
 ```
 
 ## Quick Start (Python API)
