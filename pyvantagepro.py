@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# Pedagogical note: this line is part of the step-by-step program flow.
+# Pedagogical note: the next line explains one concrete step in the program flow.
 from pyvantagepro.__main__ import main
 
-# Pedagogical note: this line is part of the step-by-step program flow.
+# Pedagogical note: the next line explains one concrete step in the program flow.
 if __name__ == '__main__':
-    # Pedagogical note: this line is part of the step-by-step program flow.
+    # Pedagogical note: the next line explains one concrete step in the program flow.
     main()
