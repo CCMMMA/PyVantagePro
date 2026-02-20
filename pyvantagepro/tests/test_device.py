@@ -424,6 +424,49 @@ def test_get_current_data_as_json_drops_future_storm_start_date(monkeypatch):
     json.dumps(payload)
 
 
+def test_get_current_data_as_list_returns_meta_order(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'Datetime': datetime(2026, 1, 2, 3, 4, 5),
+        'TempIn': 68.0,
+        'HumIn': 45,
+        'WindSpeed': 10,
+    }
+
+    fields = vp.meta()
+    payload = vp.get_current_data_as_list()
+    assert isinstance(payload, list)
+    assert len(payload) == len(fields)
+    assert payload[fields.index('Datetime')] == '2026-01-02T03:04:05'
+    assert payload[fields.index('TempIn')] == 20.0
+    assert payload[fields.index('HumIn')] == 0.45
+    assert round(payload[fields.index('WindSpeed')], 6) == round(10 * 0.44704, 6)
+    json.dumps(payload)
+
+
+def test_get_current_data_as_list_sets_none_for_invalid_values(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'StormStartDate': tomorrow,
+        'HumIn': 250,
+        'ExtraTemps01': 255,
+        'TempIn': 68.0,
+    }
+
+    fields = vp.meta()
+    payload = vp.get_current_data_as_list()
+    assert payload[fields.index('StormStartDate')] is None
+    assert payload[fields.index('HumIn')] is None
+    assert payload[fields.index('ExtraTemps01')] is None
+    assert payload[fields.index('TempIn')] == 20.0
+    json.dumps(payload)
+
+
 def test_wake_up_accepts_crlf_ack(monkeypatch):
     device_module = load_device_module(monkeypatch)
     import pyvantagepro.utils as utils_module

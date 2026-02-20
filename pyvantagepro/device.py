@@ -458,6 +458,30 @@ class VantagePro2(object):
             payload["failed"] = failed
         return payload
 
+    def get_current_data_as_list(self):
+        '''Return current data as a list ordered like meta().'''
+        data = self.get_current_data()
+        payload = []
+        for key, value in data.items():
+            if key in self.ZERO_VALUE_ALARM_JSON_KEYS and value == 0:
+                payload.append(None)
+                continue
+            if key in self.BYTE_MAX_SENTINEL_JSON_KEYS and value == 255:
+                payload.append(None)
+                continue
+            if hasattr(value, 'isoformat'):
+                json_value = value.isoformat()
+                payload.append(
+                    json_value if self._passes_sanity_check(key, json_value) else None
+                )
+                continue
+            si_value = self._convert_to_si_json_value(key, value)
+            json_value = self._normalize_json_value(key, si_value)
+            payload.append(
+                json_value if self._passes_sanity_check(key, json_value) else None
+            )
+        return payload
+
     def _convert_to_si_json_value(self, key, value):
         if key in ("SunRise", "SunSet") and isinstance(value, str):
             if len(value) == 5 and value[2] == ":":
