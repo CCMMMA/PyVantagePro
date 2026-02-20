@@ -493,6 +493,11 @@ class VantagePro2(object):
     def _passes_sanity_check(self, key, value):
         if isinstance(value, bool):
             return True
+        if key == "StormStartDate" and isinstance(value, str):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date() <= datetime.now().date()
+            except ValueError:
+                return False
         if isinstance(value, (int, float)):
             if not math.isfinite(value):
                 return False

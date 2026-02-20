@@ -12,7 +12,7 @@ import importlib
 import json
 import sys
 import types
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ..utils import hex_to_bytes
 
@@ -403,6 +403,24 @@ def test_get_current_data_as_json_drops_sanity_failures(monkeypatch):
     assert 'HumIn' not in payload
     assert 'BatteryVolts' not in payload
     assert payload['failed'] == ['HumIn', 'BatteryVolts']
+    json.dumps(payload)
+
+
+def test_get_current_data_as_json_drops_future_storm_start_date(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'Datetime': datetime(2026, 1, 2, 3, 4, 5),
+        'StormStartDate': tomorrow,
+        'TempIn': 68.0,
+    }
+
+    payload = vp.get_current_data_as_json()
+    assert payload['TempIn'] == 20.0
+    assert 'StormStartDate' not in payload
+    assert payload['failed'] == ['StormStartDate']
     json.dumps(payload)
 
 
