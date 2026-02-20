@@ -228,6 +228,21 @@ class VantagePro2(object):
         '''Return the names of variables available from get_current_data().'''
         return list(self.get_current_data().keys())
 
+    def get_current_data_as_json(self):
+        '''Return get_current_data() as a JSON-serializable dict.'''
+        data = self.get_current_data()
+        payload = {}
+        for key, value in data.items():
+            if hasattr(value, 'isoformat'):
+                try:
+                    payload[key] = value.isoformat(sep=' ')
+                    continue
+                except TypeError:
+                    payload[key] = value.isoformat()
+                    continue
+            payload[key] = value
+        return payload
+
     def get_archives(self, start_date=None, stop_date=None):
         '''Get archive records until `start_date` and `stop_date` as
         ListDict.

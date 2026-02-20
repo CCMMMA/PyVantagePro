@@ -91,7 +91,25 @@ print(subset.to_csv())
 device.close()
 ```
 
-### 3. Download archives for a specific time window
+### 3. Get live data as a JSON object
+
+```python
+import json
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+payload = device.get_current_data_as_json()
+
+print(type(payload))          # dict
+print(payload['TempIn'])      # float
+print(payload['Datetime'])    # JSON-ready datetime string
+
+# Optional: serialize to JSON string
+print(json.dumps(payload))
+device.close()
+```
+
+### 4. Download archives for a specific time window
 
 ```python
 from datetime import datetime
@@ -109,7 +127,7 @@ print(archives[-1])
 device.close()
 ```
 
-### 4. Keep a local CSV archive up to date
+### 5. Keep a local CSV archive up to date
 
 ```python
 from pathlib import Path
@@ -128,7 +146,7 @@ if new_rows:
 device.close()
 ```
 
-### 5. Read station metadata and diagnostics
+### 6. Read station metadata and diagnostics
 
 ```python
 from pyvantagepro import VantagePro2
@@ -145,7 +163,7 @@ print("Barometer calibration:", device.getbar())
 device.close()
 ```
 
-### 6. Set station time and archive period
+### 7. Set station time and archive period
 
 ```python
 from datetime import datetime
@@ -165,7 +183,7 @@ print("archive period:", old_period, "->", device.getperiod())
 device.close()
 ```
 
-### 7. Handle recoverable link errors
+### 8. Handle recoverable link errors
 
 ```python
 from pyvantagepro import VantagePro2

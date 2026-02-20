@@ -9,6 +9,7 @@
 from __future__ import unicode_literals
 import errno
 import importlib
+import json
 import sys
 import types
 from datetime import datetime
@@ -260,6 +261,42 @@ def test_meta_returns_current_data_variable_names(monkeypatch):
     assert 'TempOut' in fields
     assert 'RainRate' in fields
     assert 'SunRise' in fields
+
+
+def test_get_current_data_as_json(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+    import pyvantagepro.utils as utils_module
+    monkeypatch.setattr(utils_module.time, 'sleep', lambda _: None)
+
+    loop_payload = hex_to_bytes(
+        "4C4F4FC4006802547B52031EFF7FFFFFFF7FFFFFFFFFFFFF"
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F0000"
+        "FFFF000000003C03000000000000FFFFFFFFFFFFFF000000"
+        "0000000000000000000000000000008C00060C610183070A"
+        "0D2A3C"
+    )
+
+    link = ScriptedLink(
+        read_values=[
+            '\n\r',
+            '\x06',
+            loop_payload,
+        ]
+    )
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.link = link
+    vp._link_factory = None
+    vp._timeout = 10
+    vp.RevA = False
+    vp.RevB = True
+
+    payload = vp.get_current_data_as_json()
+    assert isinstance(payload, dict)
+    assert payload['TempIn'] == 85.0
+    assert payload['RainRate'] == 655.35
+    assert isinstance(payload['Datetime'], str)
+    json.dumps(payload)
 
 
 def test_wake_up_accepts_crlf_ack(monkeypatch):
