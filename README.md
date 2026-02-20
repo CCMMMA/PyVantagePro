@@ -12,9 +12,15 @@ This project provides:
 - Read current station time (`gettime`) and set it (`settime`)
 - Read live LOOP data (`get_current_data`)
 - Download archive records (`get_archives`)
+- Get normalized live payloads (`get_current_data_as_json`, `get_current_data_as_list`)
+- Get normalized archive payloads (`get_archives_as_json`, `get_archives_as_list`)
 - Read station diagnostics, firmware info, and barometer calibration data
 - Export data to CSV from API and CLI
 - Connection recovery on `BrokenPipeError` (automatic reconnect/retry)
+
+## Examples
+
+- Full runnable catalog: [`examples/README.md`](examples/README.md)
 
 ## Installation
 
@@ -176,6 +182,41 @@ print(archives[-1])
 device.close()
 ```
 
+### 4b. Download normalized archives as JSON rows
+
+```python
+from datetime import datetime
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+start = datetime(2026, 2, 19, 0, 0)
+stop = datetime(2026, 2, 19, 23, 59)
+
+rows = device.get_archives_as_json(start_date=start, stop_date=stop)
+print(type(rows))      # list
+print(type(rows[0]))   # dict
+print(rows[0])         # ISO8601 + SI-normalized values
+device.close()
+```
+
+### 4c. Download normalized archives as ordered lists
+
+```python
+from datetime import datetime
+from pyvantagepro import VantagePro2
+
+device = VantagePro2.from_url('tcp:127.0.0.1:22222')
+start = datetime(2026, 2, 19, 0, 0)
+stop = datetime(2026, 2, 19, 23, 59)
+
+meta = device.meta()
+rows = device.get_archives_as_list(start_date=start, stop_date=stop)
+print(len(rows))
+print(rows[0])  # values aligned with meta() order where available
+print(meta[0])
+device.close()
+```
+
 ### 5. Keep a local CSV archive up to date
 
 ```python
@@ -248,6 +289,25 @@ except (NoDeviceException, BadAckException) as exc:
 finally:
     device.close()
 ```
+
+## Python API Summary
+
+Commonly used methods/properties on `VantagePro2`:
+
+- Constructors: `from_url`, `from_serial`
+- Clock/period: `gettime`, `settime`, `getperiod`, `setperiod`
+- Live data:
+  - `get_current_data`
+  - `meta`
+  - `get_current_data_as_json`
+  - `get_current_data_as_list`
+- Archives:
+  - `get_archives`
+  - `get_archives_as_json`
+  - `get_archives_as_list`
+- Diagnostics/info:
+  - `getdiagnostics`, `getbar`
+  - `firmware_date`, `firmware_version`, `timezone`
 
 ## Connection URLs
 

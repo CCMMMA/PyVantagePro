@@ -533,7 +533,23 @@ class VantagePro2(object):
 
     def get_current_data_as_json(self):
         '''Return get_current_data() as a JSON-serializable dict.'''
-        data = self.get_current_data()
+        return self._mapping_to_json_payload(self.get_current_data())
+
+    def get_current_data_as_list(self):
+        '''Return current data as a list ordered like meta().'''
+        return self._mapping_to_list_payload(self.get_current_data())
+
+    def get_archives_as_json(self, start_date=None, stop_date=None):
+        '''Return archive rows as normalized JSON dictionaries.'''
+        rows = self.get_archives(start_date=start_date, stop_date=stop_date)
+        return [self._mapping_to_json_payload(row) for row in rows]
+
+    def get_archives_as_list(self, start_date=None, stop_date=None):
+        '''Return archive rows as normalized ordered lists.'''
+        rows = self.get_archives(start_date=start_date, stop_date=stop_date)
+        return [self._mapping_to_list_payload(row) for row in rows]
+
+    def _mapping_to_json_payload(self, data):
         payload = {}
         failed = []
         for key, value in data.items():
@@ -560,9 +576,7 @@ class VantagePro2(object):
             payload["failed"] = failed
         return payload
 
-    def get_current_data_as_list(self):
-        '''Return current data as a list ordered like meta().'''
-        data = self.get_current_data()
+    def _mapping_to_list_payload(self, data):
         payload = []
         for key, value in data.items():
             if key in self.ZERO_VALUE_ALARM_JSON_KEYS and value == 0:

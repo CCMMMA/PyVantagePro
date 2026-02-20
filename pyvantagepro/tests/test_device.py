@@ -497,6 +497,85 @@ def test_get_current_data_as_list_sets_none_for_invalid_values(monkeypatch):
     json.dumps(payload)
 
 
+def test_get_archives_as_json_normalizes_rows(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    calls = {}
+    vp.get_archives = lambda start_date=None, stop_date=None: calls.update({
+        'start': start_date, 'stop': stop_date
+    }) or [
+        {
+            'Datetime': datetime(2026, 2, 19, 1, 0, 0),
+            'TempIn': 68.0,
+            'HumIn': 45,
+            'RainDay': 1.0,
+        },
+        {
+            'Datetime': datetime(2026, 2, 19, 2, 0, 0),
+            'TempIn': 68.0,
+            'HumIn': 250,
+            'UV': 255,
+            'SolarRad': 32767,
+        },
+    ]
+
+    start = datetime(2026, 2, 19, 0, 0, 0)
+    stop = datetime(2026, 2, 19, 23, 59, 0)
+    rows = vp.get_archives_as_json(start_date=start, stop_date=stop)
+
+    assert calls['start'] == start
+    assert calls['stop'] == stop
+    assert len(rows) == 2
+    assert rows[0]['Datetime'] == '2026-02-19T01:00:00'
+    assert rows[0]['TempIn'] == 20.0
+    assert rows[0]['HumIn'] == 0.45
+    assert rows[0]['RainDay'] == 25.4
+    assert rows[1]['Datetime'] == '2026-02-19T02:00:00'
+    assert rows[1]['TempIn'] == 20.0
+    assert 'HumIn' not in rows[1]
+    assert 'UV' not in rows[1]
+    assert 'SolarRad' not in rows[1]
+    assert rows[1]['failed'] == ['HumIn', 'UV', 'SolarRad']
+    json.dumps(rows)
+
+
+def test_get_archives_as_list_normalizes_rows(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    row1 = {
+        'Datetime': datetime(2026, 2, 19, 1, 0, 0),
+        'TempIn': 68.0,
+        'HumIn': 45,
+        'RainDay': 1.0,
+    }
+    row2 = {
+        'Datetime': datetime(2026, 2, 19, 2, 0, 0),
+        'TempIn': 68.0,
+        'HumIn': 250,
+        'UV': 255,
+        'SolarRad': 32767,
+    }
+    vp.get_archives = lambda start_date=None, stop_date=None: [row1, row2]
+
+    rows = vp.get_archives_as_list()
+    fields1 = list(row1.keys())
+    fields2 = list(row2.keys())
+
+    assert len(rows) == 2
+    assert rows[0][fields1.index('Datetime')] == '2026-02-19T01:00:00'
+    assert rows[0][fields1.index('TempIn')] == 20.0
+    assert rows[0][fields1.index('HumIn')] == 0.45
+    assert rows[0][fields1.index('RainDay')] == 25.4
+    assert rows[1][fields2.index('Datetime')] == '2026-02-19T02:00:00'
+    assert rows[1][fields2.index('TempIn')] == 20.0
+    assert rows[1][fields2.index('HumIn')] is None
+    assert rows[1][fields2.index('UV')] is None
+    assert rows[1][fields2.index('SolarRad')] is None
+    json.dumps(rows)
+
+
 def test_wake_up_accepts_crlf_ack(monkeypatch):
     device_module = load_device_module(monkeypatch)
     import pyvantagepro.utils as utils_module
