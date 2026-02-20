@@ -299,6 +299,48 @@ def test_get_current_data_as_json(monkeypatch):
     json.dumps(payload)
 
 
+def test_get_current_data_as_json_filters_zero_alarm_keys(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'Datetime': datetime(2026, 1, 2, 3, 4, 5),
+        'TempIn': 0,
+        'AlarmInLowTemp': 0,
+        'AlarmOutHighUV': 2,
+    }
+
+    payload = vp.get_current_data_as_json()
+    assert 'AlarmInLowTemp' not in payload
+    assert payload['AlarmOutHighUV'] == 2
+    assert payload['TempIn'] == 0
+    assert payload['Datetime'] == '2026-01-02 03:04:05'
+    json.dumps(payload)
+
+
+def test_get_current_data_as_json_filters_255_sensor_sentinels(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'Datetime': datetime(2026, 1, 2, 3, 4, 5),
+        'ExtraTemps01': 255,
+        'LeafWetness04': 0,
+        'SoilMoist04': 255,
+        'HumExtra02': 254,
+        'TempOut': 255,
+    }
+
+    payload = vp.get_current_data_as_json()
+    assert 'ExtraTemps01' not in payload
+    assert 'SoilMoist04' not in payload
+    assert payload['LeafWetness04'] == 0
+    assert payload['HumExtra02'] == 254
+    assert payload['TempOut'] == 255
+    assert payload['Datetime'] == '2026-01-02 03:04:05'
+    json.dumps(payload)
+
+
 def test_wake_up_accepts_crlf_ack(monkeypatch):
     device_module = load_device_module(monkeypatch)
     import pyvantagepro.utils as utils_module
