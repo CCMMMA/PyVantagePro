@@ -245,7 +245,7 @@ def normalize_config(cfg):
         "qos": int(cfg.get("mqttQos", 1)),
         "topic": cfg["uuid"],
         "keepalive": int(cfg.get("mqttKeepalive", 30)),
-        "reconnect_sleep": float(cfg.get("delay", 1.0)),
+        "reconnect_sleep": float(cfg.get("mqttReconnectSleep", 1.0)),
     }
 
     return {
@@ -255,7 +255,7 @@ def normalize_config(cfg):
         "name": cfg["name"],
         "latitude": float(cfg["lat"]),
         "longitude": float(cfg["lon"]),
-        "interval": float(cfg.get("usbPollInterval", 2.0)),
+        "interval": float(cfg.get("delay", cfg.get("usbPollInterval", 2.0))),
         "timeout": float(cfg.get("timeout", 10)),
         "mqtt": mqtt_cfg,
         "spool_path": Path(cfg.get("mqttSpoolFile", str((root or Path(".") ) / "mqtt_spool.jsonl"))),
@@ -290,7 +290,45 @@ def build_arg_parser():
         action="store_true",
         help="Disable MQTT publishing",
     )
+    parser.add_argument(
+        "--parameters",
+        default=None,
+        help="Parameters JSON file path (default: parameters.json near this script)",
+    )
     return parser
+
+
+def resolve_parameters_path(value):
+    if value:
+        return Path(value)
+    return Path(__file__).with_name("parameters.json")
+
+
+def load_parameters_map(path):
+    if not path.exists():
+        LOGGER.warning(
+            "Parameters file %s not found: all parameters will be used", path
+        )
+        return None
+    with path.open("r", encoding="utf-8") as fp:
+        data = json.load(fp)
+    if not isinstance(data, dict):
+        raise SystemExit("Parameters file must contain a JSON object")
+    return dict((str(k), bool(v)) for k, v in data.items())
+
+
+def is_parameter_enabled(parameters_map, key):
+    if parameters_map is None:
+        return True
+    return bool(parameters_map.get(key, False))
+
+
+def filter_payload(parameters_map, payload):
+    if parameters_map is None:
+        return dict(payload)
+    return dict(
+        (k, v) for k, v in payload.items() if is_parameter_enabled(parameters_map, k)
+    )
 
 
 def install_signal_handlers(stop_event):
@@ -319,6 +357,7 @@ def main():
 
     args = build_arg_parser().parse_args()
     cfg = normalize_config(load_config(Path(args.config)))
+    parameters_map = load_parameters_map(resolve_parameters_path(args.parameters))
 
     no_csv = args.no_csv
     no_mqtt = args.no_mqtt
@@ -353,13 +392,21 @@ def main():
 
     device = VantagePro2.from_url(cfg["source"], timeout=cfg["timeout"])
     try:
-        headers = [item["param"] for item in device.meta()]
+        headers = [
+            item["param"]
+            for item in device.meta()
+            if is_parameter_enabled(parameters_map, item["param"])
+        ]
         current_csv = None
 
         while not stop_event.is_set():
             now_utc = datetime.utcnow()
+            # Apply per-read timeout from config before each live sample.
+            if hasattr(device.link, "settimeout"):
+                device.link.settimeout(cfg["timeout"])
             payload = device.get_current_data_as_json()
-            row = csv_row_values(headers, payload)
+            filtered_payload = filter_payload(parameters_map, payload)
+            row = csv_row_values(headers, filtered_payload)
 
             if dry:
                 LOGGER.info("CSV_ROW;%s", ";".join(str(v) if v is not None else "" for v in row))
@@ -369,10 +416,10 @@ def main():
                 if target_csv != current_csv:
                     ensure_csv_header(target_csv, headers)
                     current_csv = target_csv
-                append_csv_row(current_csv, headers, payload)
+                append_csv_row(current_csv, headers, filtered_payload)
 
             point = build_geojson_point(
-                payload,
+                filtered_payload,
                 cfg["station_uuid"],
                 cfg["name"],
                 cfg["latitude"],

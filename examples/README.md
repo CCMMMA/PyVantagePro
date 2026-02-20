@@ -162,6 +162,7 @@ python3 examples/12_mqtt.py \
 CLI options:
 
 - `--config <path>`: config JSON path (default: `config.json`).
+- `--parameters <path>`: parameters filter file (default: `parameters.json` near `14_stream.py`).
 - `--dry`: disable CSV and MQTT; logs each CSV row and MQTT packet.
 - `--no-csv`: disable CSV writing.
 - `--no-mqtt`: disable MQTT publishing.
@@ -170,6 +171,13 @@ Automatic behaviors:
 
 - If `pathStorage` is missing, CSV is disabled (equivalent to `--no-csv`).
 - If MQTT config is missing or incomplete, dry mode is forced.
+- If parameters file is missing, all parameters are used.
+- If parameters file is present, only keys with `true` are processed.
+- Keys marked `false` are excluded from CSV header/rows and from MQTT GeoJSON properties.
+
+Default parameters file:
+
+- `examples/parameters.json`
 
 Supported config schema (`examples/config.json.sample`):
 
@@ -195,6 +203,13 @@ Supported config schema (`examples/config.json.sample`):
 }
 ```
 
+Config key semantics:
+
+- `delay`: seconds to sleep between two `get_current_data_as_json` calls.
+- `timeout`: per-read timeout (seconds) applied before each `get_current_data_as_json` invocation.
+- `usbPollInterval`: fallback polling interval if `delay` is missing.
+- `mqttReconnectSleep`: optional MQTT reconnect backoff (default `1.0`).
+
 Run:
 
 ```bash
@@ -206,6 +221,14 @@ Dry run:
 
 ```bash
 python3 examples/14_stream.py --config examples/config.json --dry
+```
+
+Run with explicit parameter filter file:
+
+```bash
+python3 examples/14_stream.py \
+  --config examples/config.json \
+  --parameters examples/parameters.json
 ```
 
 ## Tips
