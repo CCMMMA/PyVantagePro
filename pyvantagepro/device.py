@@ -227,6 +227,24 @@ class VantagePro2(object):
     INHG_JSON_KEYS = frozenset((
         "Barometer",
     ))
+    HUMIDITY_PERCENT_JSON_KEYS = frozenset((
+        "HumIn",
+        "HumOut",
+    ))
+    JSON_ROUND_DIGITS = {
+        "Barometer": 0,
+        "TempIn": 1,
+        "HumIn": 2,
+        "TempOut": 1,
+        "HumOut": 2,
+        "RainDay": 1,
+        "RainMonth": 0,
+        "RainYear": 0,
+        "ETDay": 1,
+        "ETMonth": 0,
+        "ETYear": 0,
+        "BatteryVolts": 2,
+    }
 
     def __init__(self, link, link_factory=None, timeout=None):
         self.link = link
@@ -406,7 +424,8 @@ class VantagePro2(object):
             if hasattr(value, 'isoformat'):
                 payload[key] = value.isoformat()
                 continue
-            payload[key] = self._convert_to_si_json_value(key, value)
+            si_value = self._convert_to_si_json_value(key, value)
+            payload[key] = self._normalize_json_value(key, si_value)
         return payload
 
     def _convert_to_si_json_value(self, key, value):
@@ -432,6 +451,13 @@ class VantagePro2(object):
             return (temp_f - 32) * 5.0 / 9.0
         if key in self.DIRECT_FAHRENHEIT_JSON_KEYS and isinstance(value, (int, float)):
             return (value - 32) * 5.0 / 9.0
+        return value
+
+    def _normalize_json_value(self, key, value):
+        if key in self.HUMIDITY_PERCENT_JSON_KEYS and isinstance(value, (int, float)):
+            value = value / 100.0
+        if key in self.JSON_ROUND_DIGITS and isinstance(value, (int, float)):
+            return round(value, self.JSON_ROUND_DIGITS[key])
         return value
 
     def get_archives(self, start_date=None, stop_date=None):

@@ -293,7 +293,7 @@ def test_get_current_data_as_json(monkeypatch):
 
     payload = vp.get_current_data_as_json()
     assert isinstance(payload, dict)
-    assert round(payload['TempIn'], 6) == round((85.0 - 32) * 5.0 / 9.0, 6)
+    assert payload['TempIn'] == round((85.0 - 32) * 5.0 / 9.0, 1)
     assert round(payload['RainRate'], 6) == round(655.35 * 25.4, 6)
     assert isinstance(payload['Datetime'], str)
     assert 'T' in payload['Datetime']
@@ -314,7 +314,7 @@ def test_get_current_data_as_json_filters_zero_alarm_keys(monkeypatch):
     payload = vp.get_current_data_as_json()
     assert 'AlarmInLowTemp' not in payload
     assert payload['AlarmOutHighUV'] == 2
-    assert payload['HumIn'] == 0
+    assert payload['HumIn'] == 0.0
     assert payload['Datetime'] == '2026-01-02T03:04:05'
     json.dumps(payload)
 
@@ -350,20 +350,38 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
         'Datetime': datetime(2026, 1, 2, 3, 4, 5),
         'SunRise': '06:30',
         'TempIn': 68.0,
+        'TempOut': 77.0,
+        'HumIn': 45,
+        'HumOut': 77,
         'ExtraTemps01': 100,
         'RainDay': 1.0,
+        'RainMonth': 12.34,
+        'RainYear': 34.56,
+        'ETDay': 0.5,
+        'ETMonth': 10.25,
+        'ETYear': 20.75,
         'WindSpeed': 10,
         'Barometer': 29.92,
+        'BatteryVolts': 0.826171875,
     }
 
     payload = vp.get_current_data_as_json()
     assert payload['Datetime'] == '2026-01-02T03:04:05'
     assert payload['SunRise'] == '06:30:00'
-    assert round(payload['TempIn'], 6) == 20.0
+    assert payload['TempIn'] == 20.0
+    assert payload['TempOut'] == 25.0
+    assert payload['HumIn'] == 0.45
+    assert payload['HumOut'] == 0.77
     assert round(payload['ExtraTemps01'], 6) == round(((100 - 90) - 32) * 5.0 / 9.0, 6)
-    assert round(payload['RainDay'], 6) == 25.4
+    assert payload['RainDay'] == 25.4
+    assert payload['RainMonth'] == round(12.34 * 25.4, 0)
+    assert payload['RainYear'] == round(34.56 * 25.4, 0)
+    assert payload['ETDay'] == round(0.5 * 25.4, 1)
+    assert payload['ETMonth'] == round(10.25 * 25.4, 0)
+    assert payload['ETYear'] == round(20.75 * 25.4, 0)
     assert round(payload['WindSpeed'], 6) == round(10 * 0.44704, 6)
-    assert round(payload['Barometer'], 6) == round(29.92 * 3386.389, 6)
+    assert payload['Barometer'] == round(29.92 * 3386.389, 0)
+    assert payload['BatteryVolts'] == 0.83
     json.dumps(payload)
 
 
