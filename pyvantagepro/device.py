@@ -182,6 +182,51 @@ class VantagePro2(object):
         "SoilMoist03",
         "SoilMoist04",
     ))
+    OFFSET_FAHRENHEIT_JSON_KEYS = frozenset((
+        "ExtraTemps01",
+        "ExtraTemps02",
+        "ExtraTemps03",
+        "ExtraTemps04",
+        "ExtraTemps05",
+        "ExtraTemps06",
+        "ExtraTemps07",
+        "LeafTemps01",
+        "LeafTemps02",
+        "LeafTemps03",
+        "LeafTemps04",
+        "SoilTemps01",
+        "SoilTemps02",
+        "SoilTemps03",
+        "SoilTemps04",
+    ))
+    DIRECT_FAHRENHEIT_JSON_KEYS = frozenset((
+        "TempIn",
+        "TempOut",
+        "TempOutHi",
+        "TempOutLow",
+        "DewPoint",
+        "HeatIndex",
+        "WindChill",
+        "THSW",
+    ))
+    INCH_JSON_KEYS = frozenset((
+        "RainRate",
+        "RainStorm",
+        "RainDay",
+        "RainMonth",
+        "RainYear",
+        "ETDay",
+        "ETMonth",
+        "ETYear",
+        "Rain",
+    ))
+    MPH_JSON_KEYS = frozenset((
+        "WindSpeed",
+        "WindSpeed10Min",
+    ))
+    INHG_JSON_KEYS = frozenset((
+        "Barometer",
+    ))
 
     def __init__(self, link, link_factory=None, timeout=None):
         self.link = link
@@ -359,14 +404,35 @@ class VantagePro2(object):
             if key in self.BYTE_MAX_SENTINEL_JSON_KEYS and value == 255:
                 continue
             if hasattr(value, 'isoformat'):
-                try:
-                    payload[key] = value.isoformat(sep=' ')
-                    continue
-                except TypeError:
-                    payload[key] = value.isoformat()
-                    continue
-            payload[key] = value
+                payload[key] = value.isoformat()
+                continue
+            payload[key] = self._convert_to_si_json_value(key, value)
         return payload
+
+    def _convert_to_si_json_value(self, key, value):
+        if key in ("SunRise", "SunSet") and isinstance(value, str):
+            if len(value) == 5 and value[2] == ":":
+                return "%s:00" % value
+            return value
+        if key == "StormStartDate" and isinstance(value, str):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date().isoformat()
+            except ValueError:
+                return value
+        if key in self.INHG_JSON_KEYS and isinstance(value, (int, float)):
+            return value * 3386.389
+        if key in self.INCH_JSON_KEYS and isinstance(value, (int, float)):
+            return value * 25.4
+        if key in self.MPH_JSON_KEYS and isinstance(value, (int, float)):
+            if value == 255:
+                return value
+            return value * 0.44704
+        if key in self.OFFSET_FAHRENHEIT_JSON_KEYS and isinstance(value, (int, float)):
+            temp_f = value - 90
+            return (temp_f - 32) * 5.0 / 9.0
+        if key in self.DIRECT_FAHRENHEIT_JSON_KEYS and isinstance(value, (int, float)):
+            return (value - 32) * 5.0 / 9.0
+        return value
 
     def get_archives(self, start_date=None, stop_date=None):
         '''Get archive records until `start_date` and `stop_date` as
