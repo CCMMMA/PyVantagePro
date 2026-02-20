@@ -102,6 +102,13 @@ class TestLoopDataParser:
         item = LoopDataParserRevB(bytes(raw), datetime.now())
         assert item['StormStartDate'] == '2024-03-02'
 
+    def test_unpack_storm_date_recent_example(self):
+        raw = bytearray(self.bytes)
+        packed = 19 + 2 * 32 + (2026 - 2000) * 512  # 2026-02-19
+        raw[48:50] = struct.pack(b'<H', packed)
+        item = LoopDataParserRevB(bytes(raw), datetime.now())
+        assert item['StormStartDate'] == '2026-02-19'
+
 
 def test_datetime_parser():
     '''Test pack and unpack datetime.'''

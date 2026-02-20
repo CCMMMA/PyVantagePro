@@ -249,7 +249,7 @@ class LoopDataParserRevB(DataParser):
 
     def unpack_storm_date(self):
         '''Given a packed storm date field, unpack and return date.'''
-        date = struct.unpack(b'<H', self.raw_bytes[48:50])[0]
+        date = self['StormStartDate']
         if date in (0x0000, 0xFFFF):
             return None
         day = date & 0x1f

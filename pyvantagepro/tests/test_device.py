@@ -357,6 +357,7 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
         'HumIn': 45,
         'HumOut': 77,
         'ExtraTemps01': 100,
+        'RainStorm': 0.95,
         'RainDay': 1.0,
         'RainMonth': 12.34,
         'RainYear': 34.56,
@@ -364,6 +365,7 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
         'ETMonth': 10.25,
         'ETYear': 20.75,
         'WindSpeed': 10,
+        'WindSpeed10Min': 11,
         'Barometer': 29.92,
         'BatteryVolts': 0.826171875,
     }
@@ -376,13 +378,15 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
     assert payload['HumIn'] == 0.45
     assert payload['HumOut'] == 0.77
     assert round(payload['ExtraTemps01'], 6) == round(((100 - 90) - 32) * 5.0 / 9.0, 6)
+    assert payload['RainStorm'] == round(0.95 * 25.4, 1)
     assert payload['RainDay'] == 25.4
     assert payload['RainMonth'] == round(12.34 * 25.4, 0)
     assert payload['RainYear'] == round(34.56 * 25.4, 0)
     assert payload['ETDay'] == round(0.5 * 25.4, 1)
     assert payload['ETMonth'] == round(10.25 * 25.4, 0)
     assert payload['ETYear'] == round(20.75 * 25.4, 0)
-    assert round(payload['WindSpeed'], 6) == round(10 * 0.44704, 6)
+    assert payload['WindSpeed'] == round(10 * 0.44704, 2)
+    assert payload['WindSpeed10Min'] == round(11 * 0.44704, 2)
     assert payload['Barometer'] == round(29.92 * 3386.389, 0)
     assert payload['BatteryVolts'] == 0.83
     json.dumps(payload)
@@ -455,6 +459,8 @@ def test_get_current_data_as_list_returns_meta_order(monkeypatch):
         'TempIn': 68.0,
         'HumIn': 45,
         'WindSpeed': 10,
+        'WindSpeed10Min': 11,
+        'RainStorm': 0.95,
     }
 
     fields = [entry['param'] for entry in vp.meta()]
@@ -464,7 +470,9 @@ def test_get_current_data_as_list_returns_meta_order(monkeypatch):
     assert payload[fields.index('Datetime')] == '2026-01-02T03:04:05'
     assert payload[fields.index('TempIn')] == 20.0
     assert payload[fields.index('HumIn')] == 0.45
-    assert round(payload[fields.index('WindSpeed')], 6) == round(10 * 0.44704, 6)
+    assert payload[fields.index('WindSpeed')] == round(10 * 0.44704, 2)
+    assert payload[fields.index('WindSpeed10Min')] == round(11 * 0.44704, 2)
+    assert payload[fields.index('RainStorm')] == round(0.95 * 25.4, 1)
     json.dumps(payload)
 
 
