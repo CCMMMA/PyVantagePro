@@ -1,0 +1,25 @@
+{
+  "uuid": "it.uniparthenope.meteo.ws2",
+  "name": "Gaiola",
+  "lat": 40.7923,
+  "lon": 14.1875,
+
+  "usbPort": 22222,
+  "usbPollInterval": 1.0,
+
+  "delay": 10,
+  "timeout": 60,
+
+  "pathStorage": "/storage/vantage-pro/",
+
+  "mqttBroker": "193.205.230.7",
+  "mqttPort": 1883,
+  "mqttUser": "admin",
+  "mqttPass": "password",
+  "mqttQos": 1,
+
+  "offlineMaxMessages": 200000,
+  "offlineMaxAgeSec": 604800,
+
+  "airlinkIntervalSec": 300
+}

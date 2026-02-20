@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import json
+import logging
 import threading
 import time
 from collections import deque
@@ -8,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 
 from pyvantagepro import VantagePro2
+
+LOGGER = logging.getLogger("pyvantagepro.examples.14_stream")
 
 
 def load_config(path):
@@ -39,10 +43,14 @@ def ensure_csv_header(path, headers):
         writer.writerow(headers)
 
 
+def csv_row_values(headers, payload):
+    return [payload.get(name, "") for name in headers]
+
+
 def append_csv_row(path, headers, payload):
     with path.open("a", newline="", encoding="utf-8") as fp:
         writer = csv.writer(fp, delimiter=";")
-        writer.writerow([payload.get(name, "") for name in headers])
+        writer.writerow(csv_row_values(headers, payload))
 
 
 def build_geojson_point(payload, name, latitude, longitude):
@@ -97,12 +105,10 @@ class DiskSpool(object):
         tmp.replace(self.path)
 
     def _enforce_limits(self, now_ts):
-        # Drop oldest by age first.
         if self.max_age_sec > 0:
             min_ts = now_ts - self.max_age_sec
             while self._items and float(self._items[0].get("ts", now_ts)) < min_ts:
                 self._items.popleft()
-        # Then cap queue length.
         if self.max_messages > 0:
             while len(self._items) > self.max_messages:
                 self._items.popleft()
@@ -122,7 +128,6 @@ class DiskSpool(object):
                 self._cv.wait(timeout=timeout)
             if not self._items:
                 return None
-            # Expire stale items before handing out.
             self._enforce_limits(time.time())
             if not self._items:
                 self._rewrite_file()
@@ -158,7 +163,7 @@ class MqttForwarder(threading.Thread):
         try:
             self.client.connect(
                 self.mqtt_cfg["host"],
-                int(self.mqtt_cfg.get("port", 1883)),
+                int(self.mqtt_cfg["port"]),
                 keepalive=int(self.mqtt_cfg.get("keepalive", 30)),
             )
             for _ in range(20):
@@ -222,100 +227,128 @@ class MqttForwarder(threading.Thread):
 
 
 def normalize_config(cfg):
-    source = cfg.get("source")
-    if not source:
-        usb_port = cfg.get("usbPort", 22222)
-        source = "tcp:127.0.0.1:%s" % usb_port
+    required = ("uuid", "name", "lat", "lon")
+    for key in required:
+        if key not in cfg:
+            raise SystemExit("config.json must define %s" % key)
 
-    root = Path(cfg.get("root", cfg.get("pathStorage", "/tmp/pyvantagepro")))
+    source = "tcp:127.0.0.1:%s" % int(cfg.get("usbPort", 22222))
+    root = Path(cfg["pathStorage"]) if cfg.get("pathStorage") else None
 
-    station_uuid = cfg.get("station_uuid", cfg.get("sstation_uuid", cfg.get("uuid")))
-    if not station_uuid:
-        raise SystemExit("config.json must define station_uuid/sstation_uuid/uuid")
-
-    name = cfg["name"]
-    latitude = cfg.get("latitude", cfg.get("lat"))
-    longitude = cfg.get("longitude", cfg.get("lon"))
-    if latitude is None or longitude is None:
-        raise SystemExit("config.json must define latitude/longitude (or lat/lon)")
-
-    interval = float(cfg.get("interval_seconds", cfg.get("usbPollInterval", 2.0)))
-    timeout = float(cfg.get("timeout", 10))
-
-    mqtt_nested = cfg.get("mqtt")
-    if mqtt_nested:
-        mqtt_cfg = {
-            "host": mqtt_nested["host"],
-            "port": int(mqtt_nested.get("port", 1883)),
-            "topic": mqtt_nested["topic"],
-            "username": mqtt_nested.get("username"),
-            "password": mqtt_nested.get("password"),
-            "qos": int(mqtt_nested.get("qos", 1)),
-            "keepalive": int(mqtt_nested.get("keepalive", 30)),
-            "reconnect_sleep": float(mqtt_nested.get("reconnect_sleep", 1.0)),
-        }
-    else:
-        mqtt_cfg = {
-            "host": cfg["mqttBroker"],
-            "port": int(cfg.get("mqttPort", 1883)),
-            "topic": cfg.get("mqttTopic", "pyvantagepro/live"),
-            "username": cfg.get("mqttUser"),
-            "password": cfg.get("mqttPass"),
-            "qos": int(cfg.get("mqttQos", 1)),
-            "keepalive": int(cfg.get("mqttKeepalive", 30)),
-            "reconnect_sleep": float(cfg.get("delay", 1.0)),
-        }
-
-    spool_path = Path(
-        cfg.get("mqtt_spool_file", str(root / "mqtt_spool.jsonl"))
-    )
-
-    offline_max_messages = int(cfg.get("offlineMaxMessages", 200000))
-    offline_max_age_sec = int(cfg.get("offlineMaxAgeSec", 604800))
+    mqtt_cfg = {
+        "host": cfg.get("mqttBroker"),
+        "port": cfg.get("mqttPort"),
+        "username": cfg.get("mqttUser"),
+        "password": cfg.get("mqttPass"),
+        "qos": int(cfg.get("mqttQos", 1)),
+        "topic": cfg.get("mqttTopic", "pyvantagepro/%s/live" % cfg["uuid"]),
+        "keepalive": int(cfg.get("mqttKeepalive", 30)),
+        "reconnect_sleep": float(cfg.get("delay", 1.0)),
+    }
 
     return {
         "source": source,
         "root": root,
-        "station_uuid": station_uuid,
-        "name": name,
-        "latitude": float(latitude),
-        "longitude": float(longitude),
-        "interval": interval,
-        "timeout": timeout,
+        "station_uuid": cfg["uuid"],
+        "name": cfg["name"],
+        "latitude": float(cfg["lat"]),
+        "longitude": float(cfg["lon"]),
+        "interval": float(cfg.get("usbPollInterval", 2.0)),
+        "timeout": float(cfg.get("timeout", 10)),
         "mqtt": mqtt_cfg,
-        "spool_path": spool_path,
-        "offline_max_messages": offline_max_messages,
-        "offline_max_age_sec": offline_max_age_sec,
+        "spool_path": Path(cfg.get("mqttSpoolFile", str((root or Path(".") ) / "mqtt_spool.jsonl"))),
+        "offline_max_messages": int(cfg.get("offlineMaxMessages", 200000)),
+        "offline_max_age_sec": int(cfg.get("offlineMaxAgeSec", 604800)),
     }
 
 
+def is_mqtt_config_complete(mqtt_cfg):
+    return bool(mqtt_cfg.get("host")) and bool(mqtt_cfg.get("port"))
+
+
+def build_arg_parser():
+    parser = argparse.ArgumentParser(description="Stream station data to CSV and MQTT GeoJSON")
+    parser.add_argument(
+        "--config",
+        default="config.json",
+        help="Path to config JSON file (default: config.json)",
+    )
+    parser.add_argument(
+        "--dry",
+        action="store_true",
+        help="Do not write CSV and do not connect MQTT; log CSV row and MQTT packet",
+    )
+    parser.add_argument(
+        "--no-csv",
+        action="store_true",
+        help="Disable CSV file writing",
+    )
+    parser.add_argument(
+        "--no-mqtt",
+        action="store_true",
+        help="Disable MQTT publishing",
+    )
+    return parser
+
+
 def main():
-    config_path = Path(__file__).with_name("config.json")
-    cfg = normalize_config(load_config(config_path))
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
+
+    args = build_arg_parser().parse_args()
+    cfg = normalize_config(load_config(Path(args.config)))
+
+    no_csv = args.no_csv
+    no_mqtt = args.no_mqtt
+    dry = args.dry
+
+    if cfg["root"] is None:
+        no_csv = True
+        LOGGER.warning("No pathStorage in config: CSV disabled (--no-csv behavior)")
+
+    if not is_mqtt_config_complete(cfg["mqtt"]):
+        dry = True
+        LOGGER.warning("MQTT config missing/incomplete: forcing --dry behavior")
+
+    if dry:
+        no_csv = True
+        no_mqtt = True
+        LOGGER.info("Dry mode enabled: CSV and MQTT disabled")
 
     stop_event = threading.Event()
-    spool = DiskSpool(
-        cfg["spool_path"],
-        max_messages=cfg["offline_max_messages"],
-        max_age_sec=cfg["offline_max_age_sec"],
-    )
-    forwarder = MqttForwarder(cfg["mqtt"], spool, stop_event)
-    forwarder.start()
+    forwarder = None
+    spool = None
+
+    if not no_mqtt:
+        spool = DiskSpool(
+            cfg["spool_path"],
+            max_messages=cfg["offline_max_messages"],
+            max_age_sec=cfg["offline_max_age_sec"],
+        )
+        forwarder = MqttForwarder(cfg["mqtt"], spool, stop_event)
+        forwarder.start()
 
     device = VantagePro2.from_url(cfg["source"], timeout=cfg["timeout"])
     try:
         headers = [item["param"] for item in device.meta()]
-
         current_csv = None
+
         while True:
             now_utc = datetime.utcnow()
-            target_csv = csv_path(cfg["root"], cfg["station_uuid"], now_utc)
-            if target_csv != current_csv:
-                ensure_csv_header(target_csv, headers)
-                current_csv = target_csv
-
             payload = device.get_current_data_as_json()
-            append_csv_row(current_csv, headers, payload)
+            row = csv_row_values(headers, payload)
+
+            if dry:
+                LOGGER.info("CSV_ROW;%s", ";".join(str(v) if v is not None else "" for v in row))
+
+            if not no_csv:
+                target_csv = csv_path(cfg["root"], cfg["station_uuid"], now_utc)
+                if target_csv != current_csv:
+                    ensure_csv_header(target_csv, headers)
+                    current_csv = target_csv
+                append_csv_row(current_csv, headers, payload)
 
             point = build_geojson_point(
                 payload,
@@ -323,11 +356,18 @@ def main():
                 cfg["latitude"],
                 cfg["longitude"],
             )
-            spool.put(json.dumps(point, separators=(",", ":")))
+            packet = json.dumps(point, separators=(",", ":"))
+
+            if dry:
+                LOGGER.info("MQTT_PACKET;%s", packet)
+            elif not no_mqtt:
+                spool.put(packet)
+
             time.sleep(cfg["interval"])
     finally:
         stop_event.set()
-        forwarder.join(timeout=3.0)
+        if forwarder is not None:
+            forwarder.join(timeout=3.0)
         device.close()
 
 

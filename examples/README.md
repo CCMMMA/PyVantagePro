@@ -139,42 +139,33 @@ python3 examples/12_mqtt.py \
 - Behavior:
   - Opens device connection.
   - Reads parameter list from `meta()` and uses those names as CSV header.
-  - Reads `root`, `station_uuid`, `name`, `latitude`, `longitude`, and MQTT settings from `examples/config.json`.
+- Reads configuration from a flat `config.json` schema (same as real deployment).
   - Rotates CSV files each UTC hour:
     - `root/YYYY/MM/DD/<station_uuid>_YYYYMMDDZHH00.csv`
   - Appends each `get_current_data_as_json()` sample as one CSV row (`;` delimiter).
   - Builds a GeoJSON `Feature` with:
     - `geometry.coordinates = [longitude, latitude]`
     - `properties = get_current_data_as_json() + {"name": ...}`
-  - Uses a store-and-forward strategy for MQTT:
+- Uses a store-and-forward strategy for MQTT:
     - every GeoJSON message is appended to a durable local spool file,
     - a dedicated MQTT worker thread forwards queued messages with `qos=1`,
     - messages are removed from spool only after successful publish.
-  - If MQTT is unavailable, data collection and CSV writing continue and queued packets are sent when connectivity returns.
+- If MQTT is unavailable, data collection and CSV writing continue and queued packets are sent when connectivity returns.
+- Uses logging output instead of `print`.
 
-Supported `examples/config.json` structure (new format):
+CLI options:
 
-```json
-{
-  "source": "tcp:127.0.0.1:22222",
-  "root": "/tmp/pyvantagepro",
-  "station_uuid": "my-station-uuid",
-  "name": "Station Name",
-  "latitude": 40.85,
-  "longitude": 14.27,
-  "interval_seconds": 2,
-  "mqtt_spool_file": "/tmp/pyvantagepro/mqtt_spool.jsonl",
-  "mqtt": {
-    "host": "127.0.0.1",
-    "port": 1883,
-    "topic": "pyvantagepro/live",
-    "username": null,
-    "password": null
-  }
-}
-```
+- `--config <path>`: config JSON path (default: `config.json`).
+- `--dry`: disable CSV and MQTT; logs each CSV row and MQTT packet.
+- `--no-csv`: disable CSV writing.
+- `--no-mqtt`: disable MQTT publishing.
 
-Also supported (real-world/legacy flat format):
+Automatic behaviors:
+
+- If `pathStorage` is missing, CSV is disabled (equivalent to `--no-csv`).
+- If MQTT config is missing or incomplete, dry mode is forced.
+
+Supported config schema (`examples/config.json`):
 
 ```json
 {
@@ -198,21 +189,16 @@ Also supported (real-world/legacy flat format):
 }
 ```
 
-Notes for legacy flat keys:
-
-- `uuid` maps to station identifier.
-- `lat` / `lon` map to GeoJSON coordinates.
-- `usbPort` maps to source `tcp:127.0.0.1:<usbPort>`.
-- `usbPollInterval` maps to sample interval.
-- `pathStorage` maps to CSV root path.
-- `mqttBroker`/`mqttPort`/`mqttUser`/`mqttPass`/`mqttQos` configure MQTT.
-- `offlineMaxMessages` and `offlineMaxAgeSec` control store-and-forward retention.
-- `delay` is used as MQTT reconnect backoff.
-
 Run:
 
 ```bash
-python3 examples/14_stream.py
+python3 examples/14_stream.py --config examples/config.json
+```
+
+Dry run:
+
+```bash
+python3 examples/14_stream.py --config examples/config.json --dry
 ```
 
 ## Tips

@@ -21,6 +21,11 @@ This project provides:
 ## Examples
 
 - Full runnable catalog: [`examples/README.md`](examples/README.md)
+- Includes `examples/14_stream.py` for production-style streaming with:
+  - hourly UTC CSV rotation,
+  - MQTT store-and-forward buffering,
+  - dry/no-csv/no-mqtt runtime switches,
+  - flat `config.json` deployment schema.
 
 ## Installation
 
