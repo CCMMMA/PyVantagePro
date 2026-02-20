@@ -12,6 +12,7 @@
 from __future__ import division, unicode_literals
 import struct
 import errno
+import math
 from datetime import datetime, timedelta
 from pylink import link_from_url, SerialLink
 
@@ -245,6 +246,24 @@ class VantagePro2(object):
         "ETYear": 0,
         "BatteryVolts": 2,
     }
+    JSON_SANITY_RANGES = {
+        "Barometer": (80000.0, 110000.0),
+        "TempIn": (-80.0, 80.0),
+        "TempOut": (-100.0, 100.0),
+        "HumIn": (0.0, 1.0),
+        "HumOut": (0.0, 1.0),
+        "RainRate": (0.0, 20000.0),
+        "RainStorm": (0.0, 10000.0),
+        "RainDay": (0.0, 1000.0),
+        "RainMonth": (0.0, 5000.0),
+        "RainYear": (0.0, 20000.0),
+        "ETDay": (0.0, 200.0),
+        "ETMonth": (0.0, 2000.0),
+        "ETYear": (0.0, 5000.0),
+        "WindSpeed": (0.0, 100.0),
+        "WindSpeed10Min": (0.0, 100.0),
+        "BatteryVolts": (0.0, 5.0),
+    }
 
     def __init__(self, link, link_factory=None, timeout=None):
         self.link = link
@@ -414,6 +433,7 @@ class VantagePro2(object):
         '''Return get_current_data() as a JSON-serializable dict.'''
         data = self.get_current_data()
         payload = {}
+        failed = []
         for key, value in data.items():
             # Drop known alarm fields when they carry the inactive sentinel.
             if key in self.ZERO_VALUE_ALARM_JSON_KEYS and value == 0:
@@ -422,10 +442,20 @@ class VantagePro2(object):
             if key in self.BYTE_MAX_SENTINEL_JSON_KEYS and value == 255:
                 continue
             if hasattr(value, 'isoformat'):
-                payload[key] = value.isoformat()
+                json_value = value.isoformat()
+                if not self._passes_sanity_check(key, json_value):
+                    failed.append(key)
+                    continue
+                payload[key] = json_value
                 continue
             si_value = self._convert_to_si_json_value(key, value)
-            payload[key] = self._normalize_json_value(key, si_value)
+            json_value = self._normalize_json_value(key, si_value)
+            if not self._passes_sanity_check(key, json_value):
+                failed.append(key)
+                continue
+            payload[key] = json_value
+        if failed:
+            payload["failed"] = failed
         return payload
 
     def _convert_to_si_json_value(self, key, value):
@@ -459,6 +489,17 @@ class VantagePro2(object):
         if key in self.JSON_ROUND_DIGITS and isinstance(value, (int, float)):
             return round(value, self.JSON_ROUND_DIGITS[key])
         return value
+
+    def _passes_sanity_check(self, key, value):
+        if isinstance(value, bool):
+            return True
+        if isinstance(value, (int, float)):
+            if not math.isfinite(value):
+                return False
+            if key in self.JSON_SANITY_RANGES:
+                lower, upper = self.JSON_SANITY_RANGES[key]
+                return lower <= value <= upper
+        return True
 
     def get_archives(self, start_date=None, stop_date=None):
         '''Get archive records until `start_date` and `stop_date` as

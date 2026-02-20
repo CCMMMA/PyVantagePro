@@ -385,6 +385,27 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
     json.dumps(payload)
 
 
+def test_get_current_data_as_json_drops_sanity_failures(monkeypatch):
+    device_module = load_device_module(monkeypatch)
+
+    vp = object.__new__(device_module.VantagePro2)
+    vp.get_current_data = lambda: {
+        'Datetime': datetime(2026, 1, 2, 3, 4, 5),
+        'TempIn': 68.0,
+        'HumIn': 250,
+        'BatteryVolts': 9.0,
+        'Barometer': 29.92,
+    }
+
+    payload = vp.get_current_data_as_json()
+    assert payload['TempIn'] == 20.0
+    assert payload['Barometer'] == round(29.92 * 3386.389, 0)
+    assert 'HumIn' not in payload
+    assert 'BatteryVolts' not in payload
+    assert payload['failed'] == ['HumIn', 'BatteryVolts']
+    json.dumps(payload)
+
+
 def test_wake_up_accepts_crlf_ack(monkeypatch):
     device_module = load_device_module(monkeypatch)
     import pyvantagepro.utils as utils_module
