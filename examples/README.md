@@ -145,7 +145,8 @@ python3 examples/12_mqtt.py \
   - Appends each `get_current_data_as_json()` sample as one CSV row (`;` delimiter).
   - Builds a GeoJSON `Feature` with:
     - `geometry.coordinates = [longitude, latitude]`
-    - `properties = get_current_data_as_json() + {"name": ...}`
+    - `properties = get_current_data_as_json() + {"uuid": ..., "name": ...}`
+  - Publishes to MQTT topic equal to station UUID (`uuid`).
 - Uses a store-and-forward strategy for MQTT:
     - every GeoJSON message is appended to a durable local spool file,
     - a dedicated MQTT worker thread forwards queued messages with `qos=1`,

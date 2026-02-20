@@ -54,8 +54,9 @@ def append_csv_row(path, headers, payload):
         writer.writerow(csv_row_values(headers, payload))
 
 
-def build_geojson_point(payload, name, latitude, longitude):
+def build_geojson_point(payload, station_uuid, name, latitude, longitude):
     properties = dict(payload)
+    properties["uuid"] = station_uuid
     properties["name"] = name
     return {
         "type": "Feature",
@@ -242,7 +243,7 @@ def normalize_config(cfg):
         "username": cfg.get("mqttUser"),
         "password": cfg.get("mqttPass"),
         "qos": int(cfg.get("mqttQos", 1)),
-        "topic": cfg.get("mqttTopic", "pyvantagepro/%s/live" % cfg["uuid"]),
+        "topic": cfg["uuid"],
         "keepalive": int(cfg.get("mqttKeepalive", 30)),
         "reconnect_sleep": float(cfg.get("delay", 1.0)),
     }
@@ -372,6 +373,7 @@ def main():
 
             point = build_geojson_point(
                 payload,
+                cfg["station_uuid"],
                 cfg["name"],
                 cfg["latitude"],
                 cfg["longitude"],
