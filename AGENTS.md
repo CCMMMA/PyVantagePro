@@ -19,7 +19,7 @@ Keep changes small, testable, and compatible with legacy behavior unless a bug f
 ## Code Style
 - Preserve the existing coding style in each file.
 - Prefer small, explicit transformations over broad refactors.
-- Add comments only where logic or data encoding is non-obvious.
+- Add pedagogical line-by-line comments to any source code.
 - Keep comments factual and close to the code they describe.
 
 ## Parsing/Units Rules
