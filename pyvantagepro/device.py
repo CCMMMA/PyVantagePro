@@ -491,15 +491,11 @@ class VantagePro2(object):
             raise NotImplementedError('Do not support RevB data format')
 
     def meta(self):
-        '''Return the names of variables available from get_current_data().'''
-        return [
-            {
-                "param": key,
-                "units": self._meta_internal_units(key),
-                "si": self._meta_si_units(key),
-            }
+        '''Return current data metadata as {variable_name: internal_unit}.'''
+        return {
+            key: self._meta_internal_units(key)
             for key in self.get_current_data().keys()
-        ]
+        }
 
     def _meta_internal_units(self, key):
         if key in self.META_INTERNAL_UNITS:

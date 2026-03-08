@@ -255,15 +255,12 @@ def test_meta_returns_current_data_metadata(monkeypatch):
     vp.RevB = True
 
     fields = vp.meta()
-    assert isinstance(fields, list)
-    assert isinstance(fields[0], dict)
-    assert set(fields[0].keys()) == set(['param', 'units', 'si'])
-    params = [entry['param'] for entry in fields]
-    assert 'Datetime' in params
-    assert 'TempIn' in params
-    assert 'TempOut' in params
-    assert 'RainRate' in params
-    assert 'SunRise' in params
+    assert isinstance(fields, dict)
+    assert fields['Datetime'] == 'console datetime'
+    assert fields['TempIn'] == 'degF'
+    assert fields['TempOut'] == 'degF'
+    assert fields['RainRate'] == 'in/h'
+    assert fields['SunRise'] == 'HH:MM'
 
 
 def test_get_current_data_as_json(monkeypatch):
@@ -463,7 +460,7 @@ def test_get_current_data_as_list_returns_meta_order(monkeypatch):
         'RainStorm': 0.95,
     }
 
-    fields = [entry['param'] for entry in vp.meta()]
+    fields = list(vp.meta().keys())
     payload = vp.get_current_data_as_list()
     assert isinstance(payload, list)
     assert len(payload) == len(fields)
@@ -488,7 +485,7 @@ def test_get_current_data_as_list_sets_none_for_invalid_values(monkeypatch):
         'TempIn': 68.0,
     }
 
-    fields = [entry['param'] for entry in vp.meta()]
+    fields = list(vp.meta().keys())
     payload = vp.get_current_data_as_list()
     assert payload[fields.index('StormStartDate')] is None
     assert payload[fields.index('HumIn')] is None

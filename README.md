@@ -82,14 +82,9 @@ device.close()
 from pyvantagepro import VantagePro2
 
 device = VantagePro2.from_url('tcp:127.0.0.1:22222')
-meta = device.meta()  # ordered list of {"param", "units", "si"}
-print(meta[0])
-# Example:
-# {
-#   "param": "TempIn",
-#   "units": "degF",
-#   "si": "degC"
-# }
+meta = device.meta()  # {"TempIn": "degF", "RainRate": "in/h", ...}
+print(meta["TempIn"])
+print(meta["RainRate"])
 device.close()
 ```
 
@@ -140,7 +135,7 @@ meta = device.meta()
 values = device.get_current_data_as_list()
 
 for info, value in zip(meta, values):
-    print(info["param"], value, info["si"])
+    print(info, value, meta[info])
 
 device.close()
 ```
@@ -218,7 +213,7 @@ meta = device.meta()
 rows = device.get_archives_as_list(start_date=start, stop_date=stop)
 print(len(rows))
 print(rows[0])  # values aligned with meta() order where available
-print(meta[0])
+print(next(iter(meta.items())))
 device.close()
 ```
 
