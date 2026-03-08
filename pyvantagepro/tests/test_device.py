@@ -256,11 +256,16 @@ def test_meta_returns_current_data_metadata(monkeypatch):
 
     fields = vp.meta()
     assert isinstance(fields, dict)
-    assert fields['Datetime'] == 'console datetime'
-    assert fields['TempIn'] == 'degF'
-    assert fields['TempOut'] == 'degF'
-    assert fields['RainRate'] == 'in/h'
-    assert fields['SunRise'] == 'HH:MM'
+    assert fields['Datetime']['internal_unit'] == 'console datetime'
+    assert fields['Datetime']['si_unit'] == 'ISO 8601 datetime'
+    assert fields['TempIn']['internal_unit'] == 'degF'
+    assert fields['TempIn']['si_unit'] == 'degC'
+    assert fields['TempOut']['internal_unit'] == 'degF'
+    assert fields['TempOut']['si_unit'] == 'degC'
+    assert fields['RainRate']['internal_unit'] == 'in/h'
+    assert fields['RainRate']['si_unit'] == 'mm/h'
+    assert fields['SunRise']['internal_unit'] == 'HH:MM'
+    assert fields['SunRise']['si_unit'] == 'ISO 8601 time'
 
 
 def test_get_current_data_as_json(monkeypatch):
