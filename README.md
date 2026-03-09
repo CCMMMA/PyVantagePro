@@ -115,7 +115,7 @@ payload = device.get_current_data_as_json()
 
 print(type(payload))          # dict
 print(payload['TempIn'])      # degC
-print(payload['HumOut'])      # 0..1 (fraction)
+print(payload['HumOut'])      # percent (0..100)
 print(payload['Datetime'])    # ISO8601 datetime string
 
 # Optional: serialize to JSON string
@@ -161,7 +161,7 @@ device.close()
 
 - Date/time fields are exported as ISO8601 strings.
 - Values are converted to SI where applicable (for example: `degF -> degC`, `in -> mm`, `mph -> m/s`, `inHg -> hPa`).
-- `HumIn` and `HumOut` are normalized to fractions in the `0..1` range.
+- `HumIn` and `HumOut` are normalized as percent values in the `0..100` range.
 - Selected fields are rounded to fixed precision for stable downstream processing.
 - Alarm/sentinel fields are filtered in JSON output and set to `None` in list output.
 - Sanity checks are applied; JSON drops invalid values and records their names in `failed`, while list output keeps position and sets invalid entries to `None`.

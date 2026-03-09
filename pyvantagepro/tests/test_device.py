@@ -377,8 +377,8 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
     assert payload['SunRise'] == '06:30:00'
     assert payload['TempIn'] == 20.0
     assert payload['TempOut'] == 25.0
-    assert payload['HumIn'] == 0.45
-    assert payload['HumOut'] == 0.77
+    assert payload['HumIn'] == 45.0
+    assert payload['HumOut'] == 77.0
     assert round(payload['ExtraTemps01'], 6) == round(((100 - 90) - 32) * 5.0 / 9.0, 6)
     assert payload['RainStorm'] == round(0.95 * 25.4, 1)
     assert payload['RainDay'] == 25.4
@@ -471,7 +471,7 @@ def test_get_current_data_as_list_returns_meta_order(monkeypatch):
     assert len(payload) == len(fields)
     assert payload[fields.index('Datetime')] == '2026-01-02T03:04:05'
     assert payload[fields.index('TempIn')] == 20.0
-    assert payload[fields.index('HumIn')] == 0.45
+    assert payload[fields.index('HumIn')] == 45.0
     assert payload[fields.index('WindSpeed')] == round(10 * 0.44704, 2)
     assert payload[fields.index('WindSpeed10Min')] == round(11 * 0.44704, 2)
     assert payload[fields.index('RainStorm')] == round(0.95 * 25.4, 1)
@@ -531,7 +531,7 @@ def test_get_archives_as_json_normalizes_rows(monkeypatch):
     assert len(rows) == 2
     assert rows[0]['Datetime'] == '2026-02-19T01:00:00'
     assert rows[0]['TempIn'] == 20.0
-    assert rows[0]['HumIn'] == 0.45
+    assert rows[0]['HumIn'] == 45.0
     assert rows[0]['RainDay'] == 25.4
     assert rows[1]['Datetime'] == '2026-02-19T02:00:00'
     assert rows[1]['TempIn'] == 20.0
@@ -568,7 +568,7 @@ def test_get_archives_as_list_normalizes_rows(monkeypatch):
     assert len(rows) == 2
     assert rows[0][fields1.index('Datetime')] == '2026-02-19T01:00:00'
     assert rows[0][fields1.index('TempIn')] == 20.0
-    assert rows[0][fields1.index('HumIn')] == 0.45
+    assert rows[0][fields1.index('HumIn')] == 45.0
     assert rows[0][fields1.index('RainDay')] == 25.4
     assert rows[1][fields2.index('Datetime')] == '2026-02-19T02:00:00'
     assert rows[1][fields2.index('TempIn')] == 20.0

@@ -253,8 +253,8 @@ class VantagePro2(object):
         "Barometer": (800.0, 1100.0),
         "TempIn": (-80.0, 80.0),
         "TempOut": (-100.0, 100.0),
-        "HumIn": (0.0, 1.0),
-        "HumOut": (0.0, 1.0),
+        "HumIn": (0.0, 100.0),
+        "HumOut": (0.0, 100.0),
         "RainRate": (0.0, 20000.0),
         "RainStorm": (0.0, 10000.0),
         "RainDay": (0.0, 1000.0),
@@ -306,8 +306,8 @@ class VantagePro2(object):
         "Barometer": "hPa",
         "TempIn": "degC",
         "TempOut": "degC",
-        "HumIn": "1",
-        "HumOut": "1",
+        "HumIn": "%",
+        "HumOut": "%",
         "WindSpeed": "m/s",
         "WindSpeed10Min": "m/s",
         "WindDir": "deg",
@@ -628,7 +628,7 @@ class VantagePro2(object):
 
     def _normalize_json_value(self, key, value):
         if key in self.HUMIDITY_PERCENT_JSON_KEYS and isinstance(value, (int, float)):
-            value = value / 100.0
+            value = float(value)
         if key in self.JSON_ROUND_DIGITS and isinstance(value, (int, float)):
             return round(value, self.JSON_ROUND_DIGITS[key])
         return value
