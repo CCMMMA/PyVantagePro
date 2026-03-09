@@ -24,6 +24,7 @@ This project provides:
 - Includes `examples/14_stream.py` for production-style streaming with:
   - hourly UTC CSV rotation,
   - MQTT store-and-forward buffering,
+  - optional per-key filtering via `examples/parameters.json`,
   - dry/no-csv/no-mqtt runtime switches,
   - flat `config.json` deployment schema.
 
@@ -165,6 +166,37 @@ device.close()
 - Selected fields are rounded to fixed precision for stable downstream processing.
 - Alarm/sentinel fields are filtered in JSON output and set to `None` in list output.
 - Sanity checks are applied; JSON drops invalid values and records their names in `failed`, while list output keeps position and sets invalid entries to `None`.
+
+### 3e. Example of failing sensor values in normalized outputs
+
+Some console values are sentinel readings that indicate missing/invalid sensor data (for example `UV=255`, `SolarRad=32767`).
+
+`get_current_data_as_json()` behavior:
+
+```python
+payload = device.get_current_data_as_json()
+
+# When UV/SolarRad are sentinel values:
+# - keys are removed from payload
+# - failed list includes dropped keys
+print(payload.get("UV"))        # None
+print(payload.get("SolarRad"))  # None
+print(payload.get("failed"))    # ['UV', 'SolarRad'] (if both failed)
+```
+
+`get_current_data_as_list()` behavior:
+
+```python
+meta = device.meta()
+row = device.get_current_data_as_list()
+
+uv_idx = [m["param"] for m in meta].index("UV")
+solar_idx = [m["param"] for m in meta].index("SolarRad")
+
+# Same failing sensors become None in-place to preserve column order.
+print(row[uv_idx])     # None
+print(row[solar_idx])  # None
+```
 
 ### 4. Download archives for a specific time window
 
