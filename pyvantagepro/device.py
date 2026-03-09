@@ -233,7 +233,7 @@ class VantagePro2(object):
         "HumOut",
     ))
     JSON_ROUND_DIGITS = {
-        "Barometer": 0,
+        "Barometer": 1,
         "TempIn": 1,
         "HumIn": 2,
         "TempOut": 1,
@@ -250,7 +250,7 @@ class VantagePro2(object):
         "BatteryVolts": 2,
     }
     JSON_SANITY_RANGES = {
-        "Barometer": (80000.0, 110000.0),
+        "Barometer": (800.0, 1100.0),
         "TempIn": (-80.0, 80.0),
         "TempOut": (-100.0, 100.0),
         "HumIn": (0.0, 1.0),
@@ -303,7 +303,7 @@ class VantagePro2(object):
     META_SI_UNITS = {
         "Datetime": "ISO 8601 datetime",
         "BarTrend": "trend code",
-        "Barometer": "Pa",
+        "Barometer": "hPa",
         "TempIn": "degC",
         "TempOut": "degC",
         "HumIn": "1",
@@ -612,7 +612,7 @@ class VantagePro2(object):
             except ValueError:
                 return value
         if key in self.INHG_JSON_KEYS and isinstance(value, (int, float)):
-            return value * 3386.389
+            return value * 33.86389
         if key in self.INCH_JSON_KEYS and isinstance(value, (int, float)):
             return value * 25.4
         if key in self.MPH_JSON_KEYS and isinstance(value, (int, float)):

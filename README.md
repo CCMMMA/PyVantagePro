@@ -160,7 +160,7 @@ device.close()
 ### 3d. Normalization rules used by JSON/list payloads
 
 - Date/time fields are exported as ISO8601 strings.
-- Values are converted to SI where applicable (for example: `degF -> degC`, `in -> mm`, `mph -> m/s`, `inHg -> Pa`).
+- Values are converted to SI where applicable (for example: `degF -> degC`, `in -> mm`, `mph -> m/s`, `inHg -> hPa`).
 - `HumIn` and `HumOut` are normalized to fractions in the `0..1` range.
 - Selected fields are rounded to fixed precision for stable downstream processing.
 - Alarm/sentinel fields are filtered in JSON output and set to `None` in list output.

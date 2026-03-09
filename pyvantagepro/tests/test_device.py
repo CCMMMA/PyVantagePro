@@ -389,7 +389,7 @@ def test_get_current_data_as_json_converts_to_si(monkeypatch):
     assert payload['ETYear'] == round(20.75 * 25.4, 0)
     assert payload['WindSpeed'] == round(10 * 0.44704, 2)
     assert payload['WindSpeed10Min'] == round(11 * 0.44704, 2)
-    assert payload['Barometer'] == round(29.92 * 3386.389, 0)
+    assert payload['Barometer'] == round(29.92 * 33.86389, 1)
     assert payload['BatteryVolts'] == 0.83
     json.dumps(payload)
 
@@ -408,7 +408,7 @@ def test_get_current_data_as_json_drops_sanity_failures(monkeypatch):
 
     payload = vp.get_current_data_as_json()
     assert payload['TempIn'] == 20.0
-    assert payload['Barometer'] == round(29.92 * 3386.389, 0)
+    assert payload['Barometer'] == round(29.92 * 33.86389, 1)
     assert 'HumIn' not in payload
     assert 'BatteryVolts' not in payload
     assert payload['failed'] == ['HumIn', 'BatteryVolts']
