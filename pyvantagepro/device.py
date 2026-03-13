@@ -273,6 +273,7 @@ class VantagePro2(object):
         "UV": {255},
         "SolarRad": {32767},
         "WindDir": {32767},
+        "RainRate": {65535},
     }
     META_INTERNAL_UNITS = {
         "Datetime": "console datetime",
