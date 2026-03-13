@@ -249,27 +249,30 @@ class VantagePro2(object):
         "ETYear": 0,
         "BatteryVolts": 2,
     }
+    # Sanity ranges apply after normalization to SI-friendly output units.
     JSON_SANITY_RANGES = {
-        "Barometer": (800.0, 1100.0),
-        "TempIn": (-80.0, 80.0),
-        "TempOut": (-100.0, 100.0),
-        "HumIn": (0.0, 100.0),
-        "HumOut": (0.0, 100.0),
-        "RainRate": (0.0, 20000.0),
-        "RainStorm": (0.0, 10000.0),
-        "RainDay": (0.0, 1000.0),
-        "RainMonth": (0.0, 5000.0),
-        "RainYear": (0.0, 20000.0),
-        "ETDay": (0.0, 200.0),
-        "ETMonth": (0.0, 2000.0),
-        "ETYear": (0.0, 5000.0),
-        "WindSpeed": (0.0, 100.0),
-        "WindSpeed10Min": (0.0, 100.0),
-        "BatteryVolts": (0.0, 5.0),
+        "Barometer": (800.0, 1100.0),      # hPa
+        "TempIn": (-40.0, 60.0),           # degC
+        "TempOut": (-90.0, 60.0),          # degC
+        "HumIn": (0.0, 100.0),             # %
+        "HumOut": (0.0, 100.0),            # %
+        "RainRate": (0.0, 500.0),          # mm/h
+        "RainStorm": (0.0, 5000.0),        # mm
+        "RainDay": (0.0, 2000.0),          # mm
+        "RainMonth": (0.0, 5000.0),        # mm
+        "RainYear": (0.0, 20000.0),        # mm
+        "ETDay": (0.0, 50.0),              # mm
+        "ETMonth": (0.0, 500.0),           # mm
+        "ETYear": (0.0, 3000.0),           # mm
+        "WindSpeed": (0.0, 120.0),         # m/s
+        "WindSpeed10Min": (0.0, 120.0),    # m/s
+        "WindDir": (0.0, 360.0),           # deg
+        "BatteryVolts": (0.0, 5.0),        # V
     }
     JSON_SANITY_SENTINELS = {
         "UV": {255},
         "SolarRad": {32767},
+        "WindDir": {32767},
     }
     META_INTERNAL_UNITS = {
         "Datetime": "console datetime",

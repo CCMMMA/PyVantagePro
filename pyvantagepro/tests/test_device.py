@@ -299,7 +299,9 @@ def test_get_current_data_as_json(monkeypatch):
     payload = vp.get_current_data_as_json()
     assert isinstance(payload, dict)
     assert payload['TempIn'] == round((85.0 - 32) * 5.0 / 9.0, 1)
-    assert round(payload['RainRate'], 6) == round(655.35 * 25.4, 6)
+    assert 'RainRate' not in payload
+    assert 'failed' in payload
+    assert 'RainRate' in payload['failed']
     assert isinstance(payload['Datetime'], str)
     assert 'T' in payload['Datetime']
     json.dumps(payload)
